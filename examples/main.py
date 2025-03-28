@@ -29,9 +29,6 @@ airfoil_coords, airfoil_polar = fn.read_all_airfoil_files(airfoils_dir)
 print('plotting airfoils')
 fn.plot_airfoils(airfoil_coords)
 
-# %% Compute lift coefficient (Cl) and drag coefficient (Cd)
-#  as function of span position (r) and angle of attack (α)
-
 # %% CONSTANTS
 # Define constants
 RHO = 1.225  # kg/m^3, air density at sea level
@@ -40,3 +37,7 @@ HUB_HEIGHT = 150 #M, hub height for IEA 15-240 RWT
 RATED_POWER = 15e6  # W, rated power for IEA 15-240 RWT
 BLADES_NO = 3
 A = pi*ROTOR_RADIUS**2  # m^2, rotor area
+
+# %% Step 1: Initialize a and a', typically a=a'=0
+a = 0.0  # axial induction factor
+a_prime = 0.0  # tangential induction factor
