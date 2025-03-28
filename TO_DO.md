@@ -10,13 +10,17 @@ Overall Requirements:
  Specific TO DO
  - develop steady state blade element momentum model to predict aerodynamic performance of WT
  - model to compute key performance metrics: power output, thrust, torque as functions of WS, rotor speed, blade pitch angle
-
-- Write a function to load, parse and plot the provided dataset in inputs, 
-  generate at least one figure. Ideally also with test in tests
- - write mathematical functions in init.py
- - Loop over all blade elements
+- Loop over all blade elements
  - compute the power output of the rotor
  - thrust coef
+
+COMPLETED:
+Write a function to load, parse and plot the provided dataset in inputs, 
+  generate at least one figure. Ideally also with test in tests
+ - write mathematical functions in init.py 
+
+
+
 
 - Functional requirements (to pass)
 
