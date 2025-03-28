@@ -22,110 +22,79 @@ print(f'Data directory: {DATA_DIR}')
 airfoils_dir = DATA_DIR / 'inputs' / 'IEA-15-240-RWT' / 'Airfoils'
 print(f'Airfoils directory: {airfoils_dir}')
 
-# Dictionary to store DataFrames
+# Initialize dictionaries to store data - ADD THESE LINES
 airfoil_data = {}
-
-# Check if directory exists
-if not airfoils_dir.exists():
-    print(f"Directory not found: {airfoils_dir}")
-    print(f"Current working directory: {Path.cwd()}")
-else:
-    # Loop through all .txt files in the directory
-    for file_path in airfoils_dir.glob('*.txt'):
-        try:
-            # Extract airfoil name from filename
-            airfoil_name = file_path.stem
-            
-            # Read file into DataFrame
-            df = fn.read_airfoil_file(file_path)
-            
-            # Store DataFrame in dictionary
-            airfoil_data[airfoil_name] = df
-            
-            print(f"Successfully read {airfoil_name} with {len(df)} points")
-        except Exception as e:
-            print(f"Error reading {file_path.name}: {e}")
-
-    # Example: Access a specific airfoil DataFrame
-    if airfoil_data:
-        # Print names of all airfoils loaded
-        print("\nLoaded airfoils:")
-        for name in airfoil_data:
-            print(f"- {name}")
-        
-        # Example of using the first airfoil
-        first_airfoil = list(airfoil_data.keys())[0]
-        print(f"\nFirst 5 rows of {first_airfoil}:")
-        print(airfoil_data[first_airfoil].head())
-    else:
-        print("No airfoil data was loaded.")
-
-
-# Add this to your main code to load both file types
-# Dictionary to store polar DataFrames
 airfoil_polar_data = {}
 
-# Load the polar (.dat) files
-for file_path in airfoils_dir.glob('*.dat'):
+# For airfoil coordinate files (.txt)
+for file_path in airfoils_dir.glob('*.txt'):
     try:
-        # Extract airfoil name from filename
-        airfoil_name = file_path.stem
+        # Get both the airfoil number and data
+        airfoil_num, df = fn.read_airfoil_file(file_path)
         
-        # Read file into DataFrame
-        result = fn.read_airfoil_polar_file(file_path)
+        # Store DataFrame in dictionary using simplified key
+        airfoil_data[airfoil_num] = df
         
-        # Store DataFrame in dictionary
-        airfoil_polar_data[airfoil_name] = result
-        
-        print(f"Successfully read polar data for {airfoil_name} with {len(result['data'])} points")
+        #print(f"Successfully read airfoil {airfoil_num} with {len(df)} points")
     except Exception as e:
         print(f"Error reading {file_path.name}: {e}")
 
-# Example: Access a specific airfoil polar DataFrame
-#show the first polar airforl data
-print("\nLoaded airfoil polar data:")
-airfoil_polar_data_names = list(airfoil_polar_data.keys())
-print(airfoil_polar_data_names[0])
+print(f"Successfully read airfoil coordinates data. Amount of airfoil data: {len(airfoil_data)}")
+print(airfoil_num)
+print(f' head of airfoil coords data {airfoil_data["00"].head()}')
+
+
+
+# For polar files (.dat)
+for file_path in airfoils_dir.glob('*.dat'):
+    try:
+        # Get both the airfoil number and data
+        airfoil_num, df = fn.read_airfoil_polar_file(file_path)
+        
+        # Store DataFrame in dictionary using simplified key
+        airfoil_polar_data[airfoil_num] = df
+        
+        #print(f"Successfully read polar data for airfoil {airfoil_num} with {len(df)} points")
+    except Exception as e:
+        print(f"Error reading {file_path.name}: {e}")
+
+print(f"Successfully read polar data. Amount of airfoil data: {len(airfoil_polar_data)}")
+print(f' head of airfoil polar data {airfoil_polar_data["00"].head()}')  # Now works directly
 
 
 # %% PLOT AIRFOILS
-#first_airfoil = list(airfoil_data.keys())[0]
-#print(f"\nFirst 5 rows of {first_airfoil}:")
-#print(airfoil_data[first_airfoil].head())
+
+# %% PLOT AIRFOILS
 print('plotting airfoils')
 # Define this variable before the loop - set to True if you want to display plots
 show_plot = False  # Change to True to show plots interactively
 
-print('plotting airfoils')
-for airfoil_name in airfoil_data:
+for airfoil_num in airfoil_data:
     plt.figure(figsize=(10, 6))
     
-    # Use the current airfoil from the loop instead of hardcoding
-    plt.scatter(airfoil_data[airfoil_name]['x/c'], 
-              airfoil_data[airfoil_name]['y/c'], 
+    # Plot using the simplified airfoil numbers
+    plt.scatter(airfoil_data[airfoil_num]['x/c'], 
+              airfoil_data[airfoil_num]['y/c'], 
               s=10, 
-              label=f'Airfoil {airfoil_name.split("_")[1].replace("AF", "")}')
+              label=f'Airfoil {airfoil_num}')
     
     plt.xlabel('x/c')
     plt.ylabel('y/c')
-    plt.title(f'Airfoil Geometry for {airfoil_name}')
+    plt.title(f'Airfoil Geometry {airfoil_num}')
     plt.legend()
     plt.grid(True)
     
-    # Define the path to save the figure in the results/Pictures folder
+    # Define path to save figures
     main_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     pictures_dir = os.path.join(main_dir, 'final-project-la_bombas_del_diablo', 'outputs', 'pictures')
     os.makedirs(pictures_dir, exist_ok=True)  # Ensure the directory exists
     
-    # Extract airfoil number for the filename
-    airfoil_num = airfoil_name.split("_")[1].replace("AF", "")
     save_path = os.path.join(pictures_dir, f'Airfoil_Geometry_{airfoil_num}.png')
-
     plt.savefig(save_path)
+    
     if show_plot:
         plt.show()
     plt.close()
-
 print(f"Saved {len(airfoil_data)} airfoil plots to {pictures_dir}")
 
 

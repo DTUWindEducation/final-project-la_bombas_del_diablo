@@ -10,7 +10,7 @@ import re
 # %% Read airfoil data
 def read_airfoil_file(file_path):
     """
-    Read an airfoil coordinates file and return a DataFrame.
+    Read an airfoil coordinates file and return a DataFrame and simplified airfoil ID.
     
     Parameters:
     ----------
@@ -19,41 +19,48 @@ def read_airfoil_file(file_path):
         
     Returns:
     -------
-    pandas.DataFrame
-        DataFrame with x/c and y/c columns
+    tuple
+        (airfoil_number, pandas.DataFrame)
+        airfoil_number is the simplified ID (e.g. "00", "01")
+        DataFrame has x/c and y/c columns
     """
+    # Extract airfoil number from filename
+    file_path_str = str(file_path)
+    airfoil_num = ""
+    if "AF" in file_path_str:
+        match = re.search(r'AF(\d+)', file_path_str)
+        if match:
+            airfoil_num = match.group(1)
+    
+    # Original file reading code
     with open(file_path, 'r') as f:
         lines = f.readlines()
     
-    # Extract number of coordinates from first line
     num_coords = int(re.search(r'(\d+)', lines[0]).group(1))
     
-    # Skip header and comments, find data start
     data_start = 0
     for i, line in enumerate(lines):
-        if '!  x/c        y/c' in line and i > 4:  # Find the coordinate header line
+        if '!  x/c        y/c' in line and i > 4:
             data_start = i + 1
             break
     
-    # Read coordinates
     x_coords = []
     y_coords = []
     
-    for i in range(data_start, data_start + num_coords - 1):  # -1 because num_coords includes reference point
+    for i in range(data_start, data_start + num_coords - 1):
         if i < len(lines):
             parts = lines[i].strip().split()
             if len(parts) >= 2:
                 x_coords.append(float(parts[0]))
                 y_coords.append(float(parts[1]))
     
-    # Create DataFrame
     df = pd.DataFrame({
         'x/c': x_coords,
         'y/c': y_coords
     })
     
-    return df
-
+    # Return both the airfoil number and the data
+    return airfoil_num, df
 
 def read_airfoil_polar_file(file_path):
     """
@@ -66,39 +73,57 @@ def read_airfoil_polar_file(file_path):
         
     Returns:
     -------
-    dict
-        Dictionary containing metadata and pandas DataFrame with Alpha,
-        Cl, Cd, Cm columns
+    tuple
+        (airfoil_number, pandas.DataFrame) with Alpha, Cl, Cd, Cm columns
+        and metadata added as additional columns
     """
+    # Extract airfoil number from filename
+    file_path_str = str(file_path)
+    airfoil_num = ""
+    if "Polar" in file_path_str:
+        match = re.search(r'Polar_(\d+)', file_path_str)
+        if match:
+            airfoil_num = match.group(1)
+    
     with open(file_path, 'r') as f:
         lines = f.readlines()
     
-    # Initialize variables to store metadata
-    metadata = {}
+    # Initialize variables
+    re_number = None
     data_start = 0
     num_points = 0
     
     # Extract metadata
     for i, line in enumerate(lines):
         line = line.strip()
-        if 'Re' in line and '!' in line:
-            parts = line.split()
-            try:
-                metadata['Re'] = float(parts[0])  # Extract just the number
-            except ValueError:
-                print(f"Warning: Could not parse Reynolds number from line: {line}")
         
-        elif 'NumAlf' in line:
-            # Extract the number of data points
-            parts = line.split()
+        # Look for Reynolds number line
+        if line and len(line.split()) >= 2 and line.split()[1].startswith("Re") and "Reynolds number" in line:
             try:
-                num_points = int(parts[0])
+                re_number = float(line.split()[0])
+            except ValueError:
+                pass
+        
+        # Look for number of data points
+        elif 'NumAlf' in line:
+            try:
+                num_points = int(line.split()[0])
                 data_start = i + 2  # Skip the column headers line
                 break
             except (ValueError, IndexError):
-                print(f"Warning: Could not parse NumAlf from line: {line}")
+                pass
     
-    # If we didn't find the number of points, we can't proceed
+    # Fallback for NumAlf
+    if num_points == 0:
+        for i, line in enumerate(lines):
+            if 'NumAlf' in line:
+                try:
+                    num_points = int(line.split()[0])
+                    data_start = i + 2
+                    break
+                except (ValueError, IndexError):
+                    continue
+    
     if num_points == 0:
         raise ValueError("Could not determine number of data points in file")
     
@@ -118,18 +143,19 @@ def read_airfoil_polar_file(file_path):
                     cd.append(float(parts[2]))
                     cm.append(float(parts[3]))
                 except ValueError:
-                    # Skip lines we can't parse
                     continue
     
-    # Create DataFrame
+    # Create DataFrame with metadata as columns
     df = pd.DataFrame({
         'Alpha': alpha,
         'Cl': cl,
         'Cd': cd,
-        'Cm': cm
+        'Cm': cm,
+        'Re': re_number if re_number else None  # Add Reynolds number as a column
     })
     
-    return {'metadata': metadata, 'data': df}
+    # Return simplified structure
+    return airfoil_num, df
 
 # %% Math / Physical functions
 
