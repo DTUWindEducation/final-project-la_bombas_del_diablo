@@ -1,4 +1,5 @@
 """functions for the final project"""
+import os
 from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
@@ -156,7 +157,72 @@ def read_airfoil_polar_file(file_path):
     
     # Return simplified structure
     return airfoil_num, df
+def read_airfoil_files(airfoils_dir, file_type='coordinates'):
+    """
+    Read airfoil files and return data dictionary.
+    
+    Parameters:
+    ----------
+    airfoils_dir : Path
+        Directory containing airfoil files
+    file_type : str
+        Either 'coordinates' for .txt files or 'polar' for .dat files
+        
+    Returns:
+    -------
+    dict
+        Dictionary of airfoil data with airfoil numbers as keys
+    """
+    # Initialize dictionary to store data
+    airfoil_data = {}
+    
+    # Set file pattern and reader function based on file type
+    if file_type == 'coordinates':
+        file_pattern = '*.txt'
+        reader_function = read_airfoil_file  # Fixed: no more fn.
+        data_description = 'airfoil coordinates'
+    elif file_type == 'polar':
+        file_pattern = '*.dat'
+        reader_function = read_airfoil_polar_file
+        data_description = 'airfoil polar'
+    else:
+        raise ValueError("file_type must be 'coordinates' or 'polar'")
+    
+    # Process files
+    for file_path in airfoils_dir.glob(file_pattern):
+        try:
+            # Get both the airfoil number and data
+            airfoil_num, df = reader_function(file_path)
+            
+            # Store DataFrame in dictionary using simplified key
+            airfoil_data[airfoil_num] = df
+            
+        except Exception as e:
+            print(f"Error reading {file_path.name}: {e}")
+    
+    print(f"Successfully read {data_description} data. Amount of airfoil data: {len(airfoil_data)}")
+    if airfoil_data and "00" in airfoil_data:
+        print(f'Head of {data_description} data \n {airfoil_data["00"].head()}')
+    
+    return airfoil_data
 
+def read_all_airfoil_files(airfoils_dir):
+    """
+    Read both coordinate and polar airfoil files.
+    
+    Parameters:
+    ----------
+    airfoils_dir : Path
+        Directory containing airfoil files
+        
+    Returns:
+    -------
+    tuple
+        (coordinate_data, polar_data) tuple of dictionaries
+    """
+    coordinate_data = read_airfoil_files(airfoils_dir, file_type='coordinates')
+    polar_data = read_airfoil_files(airfoils_dir, file_type='polar')
+    return coordinate_data, polar_data
 # %% Math / Physical functions
 
 def local_solidity(r):
@@ -443,4 +509,52 @@ def aerodynamic_power(torque, rotational_speed):
 
     return P_aero
 
+# %% Plot functions
+
+def plot_airfoils(airfoil_coords, show_plot=False):
+    """"
+    "Plot airfoil coordinates."
+    Parameters:
+    ----------
+    airfoil_coords : dict
+        Dictionary of airfoil coordinates
+
+    show_plot : bool
+        Whether to display the plot interactively
+    
+    Returns:
+    -------
+    None
+        Saves the plot to the specified directory
+    
+    """
+
+    for airfoil_num in airfoil_coords:
+        plt.figure(figsize=(10, 6))
+        
+        # Plot using the simplified airfoil numbers
+        plt.scatter(airfoil_coords[airfoil_num]['x/c'], 
+                airfoil_coords[airfoil_num]['y/c'], 
+                s=10, 
+                label=f'Airfoil {airfoil_num}')
+        
+        plt.xlabel('x/c')
+        plt.ylabel('y/c')
+        plt.title(f'Airfoil Geometry {airfoil_num}')
+        plt.legend()
+        plt.grid(True)
+        
+        # Define path to save figures
+        main_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        pictures_dir = os.path.join(main_dir, 'final-project-la_bombas_del_diablo', 'outputs', 'pictures')
+        os.makedirs(pictures_dir, exist_ok=True)  # Ensure the directory exists
+        
+        save_path = os.path.join(pictures_dir, f'Airfoil_Geometry_{airfoil_num}.png')
+        plt.savefig(save_path)
+        print(f'Saved {airfoil_num}/{len(airfoil_coords)}')
+        
+        if show_plot:
+            plt.show()
+        plt.close()
+    print(f"Saved {len(airfoil_coords)} airfoil plots to {pictures_dir}")
 
