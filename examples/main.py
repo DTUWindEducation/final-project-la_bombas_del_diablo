@@ -15,19 +15,18 @@ print('imported libraries')
 # %% Load airfoil data
 # Define data directory - will work on any computer
 DATA_DIR = Path(__file__).resolve().parent.parent
-print(f'Data directory: {DATA_DIR}')
-
-
-# Path to airfoils directory - properly using Path objects for cross-platform compatibility
-airfoils_dir = DATA_DIR / 'inputs' / 'IEA-15-240-RWT' / 'Airfoils'
-print(f'Airfoils directory: {airfoils_dir}')
+#print(f'Data directory: {DATA_DIR}')
 
 # Read the coordinates and polar data for the airfoils
-airfoil_coords, airfoil_polar = fn.read_all_airfoil_files(airfoils_dir)
+airfoil_coords, airfoil_polar = fn.read_all_airfoil_files(DATA_DIR / 'inputs' / 'IEA-15-240-RWT' / 'Airfoils')
+print('airfoil data loaded')
+# %% read powercurve
+power_curve_df = fn.read_power_curve_file(DATA_DIR / 'inputs' / 'IEA-15-240-RWT' / 'IEA_15MW_RWT_Onshore.opt')
+print('power curve data loaded')
 
 # %% PLOT AIRFOILS
 print('plotting airfoils')
-fn.plot_airfoils(airfoil_coords)
+#fn.plot_airfoils(airfoil_coords)
 
 # %% CONSTANTS
 # Define constants
@@ -37,12 +36,27 @@ HUB_HEIGHT = 150 #M, hub height for IEA 15-240 RWT
 RATED_POWER = 15e6  # W, rated power for IEA 15-240 RWT
 BLADES_NO = 3
 A = pi*ROTOR_RADIUS**2  # m^2, rotor area
+#V_inflow_initial = 8  # m/s, initial inflow velocity
 
+span_positions = np.linspace(0, ROTOR_RADIUS, 50)  # m, span positions from root (0) to tip
+print('constants defined')
 # %% Compute induction factors
 
 # %% Step 1: Initialize a and a', typically a=a'=0
-a = 0.0  # axial induction factor
-a_prime = 0.0  # tangential induction factor
+# power_curve_df['a'] = 0.0  # axial induction factor
+# power_curve_df['a_prime'] = 0.0  # tangential induction factor
+flow_angles_df = fn.flow_angle_loop(span_positions, power_curve_df)
+print(flow_angles_df.head())
+# %% Step 2: Step 2: Compute the flow angle ϕ.
+print('flow angles computed')
+# %% Step 3: Compute the local angle of attack α.
+# %% Step 4: Compute Cl(α) and Cd(α) by interpolation based on the airfoil polars.
+# %% Step 5: Compute Cn and Ct.
+# %% Step 6: Update a and a′.
+# %% Step 7: If a and a′ change beyond a set tolerance, return to Step 2; otherwise, continue.
+# %% Step 8: Compute the local contribution to thrust and torque.
+# %% Loop over all blade elements, integrate to get thrust (T) and torque (M), then compute power output.
+# %% Compute thrust coefficient CT and power coefficient CP.
 
 # %% Compute lift and drag coefficients
 # Define span positions and angles of attack

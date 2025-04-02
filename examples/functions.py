@@ -223,6 +223,43 @@ def read_all_airfoil_files(airfoils_dir):
     coordinate_data = read_airfoil_files(airfoils_dir, file_type='coordinates')
     polar_data = read_airfoil_files(airfoils_dir, file_type='polar')
     return coordinate_data, polar_data
+
+
+# %% read power curve data
+def read_power_curve_file(file_path):
+
+    """_summary_
+    Read the power curve data from a file and return a DataFrame.
+
+    Parameters:
+    ----------
+    file_path : Path or str
+        Path to the power curve data file
+
+    ----------
+        
+    Returns:
+    -------
+    power_curve_df : pandas.DataFrame
+        DataFrame containing the power curve data with columns:
+        - wind_speed [m/s]
+        - pitch [deg]
+        - rot_speed [rpm]
+        - aero_power [kw]
+        - aero_thrust [kn]
+        - rot_speed_rad [rad/s]
+    """
+    # Read the data with: wind speed [m/s],          pitch [deg],     rot. speed [rpm]  ,    aero power [kw] ,    aero thrust [kn] into a df
+    
+    # Read the file, skipping the header line
+    power_curve_df = pd.read_csv(file_path, 
+                    skiprows=1,             # Skip header line
+                    sep=r'\s+',  # Use whitespace as delimiter
+                    names= ['wind_speed', 'pitch', 'rot_speed', 'aero_power', 'aero_thrust'])     # Apply column names                             
+
+    power_curve_df['rot_speed_rad'] = power_curve_df['rot_speed']*(2*pi/60)  # Convert to rad/s
+
+    return power_curve_df
 # %% Math / Physical functions
 
 def local_solidity(r):
@@ -268,8 +305,8 @@ def tip_speed_ratio(rotational_speed, ROTOR_RADIUS, V_inflow):
     return TSR
 
 # %% angles
-def flow_angle(axial_factor, tangential_factor,
-               V_inflow, rotational_speed, r):
+def compute_flow_angle(axial_factor, tangential_factor,
+                       v_inflow, rotational_speed, r):
     """
     Calculate the flow angle at a given span position.
 
@@ -293,12 +330,22 @@ def flow_angle(axial_factor, tangential_factor,
         Flow angle in radians
 
     """
-    phi = arctan((1-axial_factor) / (1 + tangential_factor)
-                      *V_inflow/(rotational_speed*r))  # flow angle in radians
+
+    # a = df[axial_factor] # axial induction factor
+    # a_prime = df[tangential_factor]  # tangential induction factor
+    # omega = rotational_speed # rotational speed in rad/s
+    # V0 = df[V_inflow] # inflow velocity
+
+    a = axial_factor # axial induction factor
+    a_prime = tangential_factor  # tangential induction factor
+    omega = rotational_speed # rotational speed in rad/s
+    V0 = v_inflow # inflow velocity
+
+    phi = arctan((1-a) / (1 + a_prime)*V0/(omega*r))  # flow angle in radians
     
     return phi
 
-def local_angle_of_attack(flow_angle, blade_pitch_angle, local_twist_angle, r):
+def compute_local_angle_of_attack(flow_angle, blade_pitch_angle, local_twist_angle, r):
     """
     Calculate the local angle of attack at a given span position.
 
@@ -488,7 +535,7 @@ def compute_dm(r, rho, V_inflow, axial_factor, tangential_factor, rotational_spe
         dT = 4*pi*r**3*rho*V_inflow*rotational_speed*tangential_factor*(1-axial_factor)*radius  # differential thrust
 
 # %% Power
-def aerodynamic_power(torque, rotational_speed):
+def compute_aerodynamic_power(torque, rotational_speed):
     """
     Calculate the aerodynamic power based on torque and rotational speed.
 
@@ -558,3 +605,42 @@ def plot_airfoils(airfoil_coords, show_plot=False):
         plt.close()
     print(f"Saved {len(airfoil_coords)} airfoil plots to {pictures_dir}")
 
+
+# %% Step 1
+def flow_angle_loop(span_positions, power_curve_df):
+
+    # Define the axial and tangential induction factors as 0
+    a = 0.0  # axial induction factor
+    a_prime = 0.0  # tangential induction factor
+
+    # Create a 2D array to store flow angles (span_positions × wind_speeds)
+    flow_angles = np.zeros((len(span_positions), len(power_curve_df)))
+
+    # Loop through each span position and operational point
+    for i, r in enumerate(span_positions):
+        for j, (_, op_point) in enumerate(power_curve_df.iterrows()):
+            # Get wind speed and rotational speed for this operational point
+            V0 = op_point['wind_speed'] # m/s
+            omega = op_point['rot_speed_rad'] # rad/s
+            
+            # Calculate flow angle for this combination
+            # phi = arctan((V0 * (1-a)) / (omega * r * (1+a_prime)))
+            if r > 0:  # Avoid division by zero at blade root
+                phi = compute_flow_angle(a, a_prime, V0, omega, r)
+                
+            else:
+                phi = pi/2  # 90 degrees at root
+            
+            flow_angles[i, j] = phi
+
+    # Convert flow angles from radians to degrees
+    flow_angles = np.degrees(flow_angles)
+
+    # Convert the 2D array to DataFrame with named columns
+    flow_angles_df = pd.DataFrame(
+        flow_angles,
+        index=span_positions,   # Radial positions as row indices
+        columns=power_curve_df['wind_speed'].values  # Wind speeds as column names
+    )
+
+    return flow_angles_df
