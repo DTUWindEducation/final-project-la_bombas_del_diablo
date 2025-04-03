@@ -19,13 +19,13 @@ DATA_DIR = Path(__file__).resolve().parent.parent
 
 # Read the coordinates and polar data for the airfoils
 airfoil_coords, airfoil_polar = fn.read_all_airfoil_files(DATA_DIR / 'inputs' / 'IEA-15-240-RWT' / 'Airfoils')
-print(' \n airfoil data loaded')
+# print(' \n airfoil data loaded')
 # %% read powercurve
 power_curve_df = fn.read_power_curve_file(DATA_DIR / 'inputs' / 'IEA-15-240-RWT' / 'IEA_15MW_RWT_Onshore.opt')
 # print(' \n power curve dataframe:')
 # print(' \n power curve shape:', power_curve_df.shape)
 print(' \n power curve data loaded')
-print("Power curve columns:", power_curve_df.columns.tolist())
+# print("Power curve columns:", power_curve_df.columns.tolist())
 # %% read blade data
 blade_data_df = fn.read_blade_data_file(DATA_DIR / 'inputs' / 'IEA-15-240-RWT' / 'IEA-15-240-RWT_AeroDyn15_blade.dat')
 # print(' \n blade data dataframe:')
@@ -46,39 +46,56 @@ HUB_HEIGHT = 150 #M, hub height for IEA 15-240 RWT
 RATED_POWER = 15e6  # W, rated power for IEA 15-240 RWT
 BLADES_NO = 3
 A = pi*ROTOR_RADIUS**2  # m^2, rotor area
-V_INFLOW = power_curve_df['wind_speed'].iloc[5]  # m/s, initial inflow velocity
-ROTATIONAL_SPEED = power_curve_df['rot_speed'].iloc[5]*(60/(2*pi))  # RAD/S, initial rotational speed
-print('V_INFLOW:', V_INFLOW)
-print('ROTATIONAL_SPEED:', ROTATIONAL_SPEED)
+V_INFLOW = power_curve_df['wind_speed'].iloc[4]  # m/s, initial inflow velocity
+ROTATIONAL_SPEED = power_curve_df['rot_speed'].iloc[4]*(60/(2*pi))  # RAD/S, initial rotational speed
+PITCH_ANGLE = power_curve_df['pitch'].iloc[4]  # degrees, initial pitch angle
+# print('V_INFLOW:', V_INFLOW)
+# print('ROTATIONAL_SPEED:', ROTATIONAL_SPEED)
+# print('PITCH_ANGLE:', PITCH_ANGLE)
 
 print(' \n constants defined')
 
 # %% Step 1 and 2: Step 2: Compute the flow angle ϕ.
-span_positions = blade_data_df['BlSpn'].values  # m, span positions from root (0) to tip
-flow_angles_df = fn.flow_angle_loop(span_positions, V_INFLOW, ROTATIONAL_SPEED)
-print(' \n flow angles df:')
-print(flow_angles_df.head())
+# span_positions = blade_data_df['BlSpn'].values  # m, span positions from root (0) to tip
+axial_induction = 0.0  # axial induction factor (assumed constant for simplicity)
+tangential_induction = 0.0  # tangential induction factor (assumed constant for simplicity)
+
+flow_angles = fn.compute_flow_angle(blade_data_df, 'BlSpn', axial_induction, tangential_induction,
+                                    V_INFLOW, ROTATIONAL_SPEED)
+# flow_angles_df = fn.flow_angle_loop(span_positions, V_INFLOW, ROTATIONAL_SPEED)
+# print(' \n flow angles df:')
+# print(flow_angles)
 # print(shape(flow_angles_df))
-print(' \n flow angles shape:', flow_angles_df.shape)
+# print(' \n flow angles shape:', flow_angles.shape)
 print(' \n flow angles computed')
 # %% Step 3: Compute the local angle of attack α.
 # Get pitch angle for V_INFLOW
-pitch_angle = power_curve_df['pitch'].iloc[5]  # Get single pitch angle value
 # Compute local angle of attack using single wind speed data
-df_local_angle_of_attack = fn.compute_local_angle_of_attack(flow_angles_df, pitch_angle, blade_data_df)
+local_angle_of_attack, local_angle_of_attack_deg  = fn.compute_local_angle_of_attack(flow_angles, PITCH_ANGLE, blade_data_df, 'BlTwist')
 
-print(' \n local angle of attack dataframe:')
-print(df_local_angle_of_attack.head())
-print(' \n local angle of attack shape:', df_local_angle_of_attack.shape)
+# print(' \n local angle of attack array (deg):')
+# print(local_angle_of_attack_deg)
+# print(' \n local angle of attack shape:', local_angle_of_attack_deg.shape)
 print(' \n local angle of attack computed')
 
+# Put angles into a dataframe
+angles_df = pd.DataFrame({
+    'span_position': blade_data_df['BlSpn'],
+    'flow_angle_deg': np.degrees(flow_angles),
+    'local_angle_of_attack_deg': local_angle_of_attack_deg,
+    'flow_angle_rad': flow_angles,
+    'local_angle_of_attack_rad': local_angle_of_attack
+    
+})
+
+# print(angles_df.head())
 # %% Step 4: Compute Cl(α) and Cd(α) by interpolation based on the airfoil polars.
 # we already hàve them??
 
 # %% Step 5: Compute Cn and Ct.
 # Cl = 200x50 values, (50 airfoils and 200 values for each ) 
 # Cd = 200x50 values,
-fn.compute_Cn
+# fn.compute_Cn
 
 # %% Step 6: Update a and a′.
 # %% Step 7: If a and a′ change beyond a set tolerance, return to Step 2; otherwise, continue.

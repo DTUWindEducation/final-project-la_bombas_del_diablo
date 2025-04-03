@@ -359,47 +359,49 @@ def tip_speed_ratio(rotational_speed, ROTOR_RADIUS, V_inflow):
     return TSR
 
 # %% angles
-def compute_flow_angle(axial_factor, tangential_factor,
-                       v_inflow, rotational_speed, r):
+def compute_flow_angle(df, span_position, axial_factor, tangential_factor,
+                       v_inflow, rotational_speed):
     """
     Calculate the flow angle at a given span position.
 
     Parameters:
     ----------
+    df : pandas.DataFrame
+        DataFrame containing span positions
+    span_position : str
+        Column name for span position in df
     axial_factor : float
         Axial induction factor
-    induction_factor : float
-        Induction factor
-    V_inflow : float
+    tangential_factor : float
+        Tangential induction factor
+    v_inflow : float
         Inflow velocity in m/s
     rotational_speed : float
-            Rotational speed in rad/s
-    r : float
-        Span position in meters
-    ----------
+        Rotational speed in rad/s
 
     returns:
     -------
-    float
-        Flow angle in radians
-
+    numpy.ndarray
+        Flow angles in radians for each span position
     """
-
-    # a = df[axial_factor] # axial induction factor
-    # a_prime = df[tangential_factor]  # tangential induction factor
-    # omega = rotational_speed # rotational speed in rad/s
-    # V0 = df[V_inflow] # inflow velocity
-
-    a = axial_factor # axial induction factor
+    a = axial_factor  # axial induction factor
     a_prime = tangential_factor  # tangential induction factor
-    omega = rotational_speed # rotational speed in rad/s
-    V0 = v_inflow # inflow velocity
+    omega = rotational_speed  # rotational speed in rad/s
+    V0 = v_inflow  # inflow velocity
+    radius = df[span_position].values  # span position in meters (np array)
+    phi = np.zeros(len(radius))  # Initialize flow angle array
 
-    phi = arctan((1-a) / (1 + a_prime)*V0/(omega*r))  # flow angle in radians
+    # Calculate flow angle for each radius
+    for i, r in enumerate(radius):
+        if r == 0:
+            phi[i] = (pi/2)  # 90 degrees at root
+        else:
+            # Fixed: proper indexing and parentheses for correct calculation
+            phi[i] = arctan(((1-a) * V0) / ((1 + a_prime) * omega * r))
     
-    return phi
+    return phi  # np array
 
-def compute_local_angle_of_attack(flow_angles_df, pitch_angle, blade_data_df):
+def compute_local_angle_of_attack(flow_angles, PITCH_ANGLE, blade_data_df, blade_twist):
     """
     Calculate the local angle of attack for a single wind speed.
 
@@ -418,31 +420,33 @@ def compute_local_angle_of_attack(flow_angles_df, pitch_angle, blade_data_df):
         DataFrame containing local angles of attack in degrees with same shape as flow_angles_df
     """
     # Get the flow angles and convert to radians
-    phi = flow_angles_df.values * (pi/180)  # Convert degrees to radians
+    phi = flow_angles * (pi/180)  # 50x1 array
     
     # Convert pitch angle to radians
-    theta = pitch_angle * (pi/180)  # Convert degrees to radians
+    theta = PITCH_ANGLE * (pi/180)  # SCALAR
     
-    # Get twist angle (beta) from blade data for each span position
-    beta = blade_data_df['BlTwist'].values * (pi/180)  # Convert degrees to radians
-    beta = beta.reshape(-1, 1)  # Shape: (num_spans, 1)
+    # Get twist angle (beta) from blade data for each span position in radians
+    beta = blade_data_df[blade_twist].values * (pi/180)  # 50x1 array
+    #beta = beta.reshape(-1, 1)  # Shape: (num_spans, 1)
     
     # Calculate local angle of attack
-    alpha = phi - (theta + beta)  # Output in radians
-    alpha_deg = alpha * (180/pi)  # Convert to degrees
+    # Output in radians
+    alpha = phi - (theta + beta)  # 50x1 array
+    # Convert to degrees
+    alpha_deg = alpha * (180/pi)  # 50x1 array
     
-    # Convert back to DataFrame with the same structure as flow_angles_df
-    alpha_df = pd.DataFrame(
-        data=alpha_deg,
-        index=flow_angles_df.index,
-        columns=flow_angles_df.columns
-    )
+    # # Convert back to DataFrame with the same structure as flow_angles_df
+    # alpha_df = pd.DataFrame(
+    #     data=alpha_deg,
+    #     index=flow_angles_df.index,
+    #     columns=flow_angles_df.columns
+    # )
     
-    # Add descriptive headers
-    alpha_df.columns.name = 'Span Position (m)'
-    alpha_df.index.name = 'Local Angle of Attack (deg)'
+    # # Add descriptive headers
+    # alpha_df.columns.name = 'Span Position (m)'
+    # alpha_df.index.name = 'Local Angle of Attack (deg)'
     
-    return alpha_df
+    return alpha, alpha_deg
     
 # %% Coefficients functions
 def compute_Cn(Cl, Cd, flow_angle):
