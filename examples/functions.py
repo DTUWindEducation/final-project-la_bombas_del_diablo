@@ -316,7 +316,7 @@ def read_blade_data_file(file_path):
 
 # %% Math / Physical functions
 
-def local_solidity(r):
+def compute_local_solidity(df_angles, blade_data_df, chord_length, span_position):
     """
     Calculate local solidity based on span position (r).
     
@@ -331,8 +331,11 @@ def local_solidity(r):
         Local solidity at span position r
     """
     B = 3 #number of blades
-
-    sigma = span_position(r)*B/(2*pi*r)  # local solidity
+    c = blade_data_df[chord_length].values  # chord length in meters
+    r = df_angles[span_position].values  # span position in meters
+    # Fixed: use np.clip to avoid division by zero
+    r = np.clip(r, 1e-6, None)  # Avoid division by zero
+    sigma = c*B/(2*pi*r)  # local solidity
 
     return sigma
 
@@ -546,32 +549,33 @@ def compute_Cp(rho, A, V_inflow, power):
 
     return Cp
 # %% induction factors
-def update_axial(flow_angle, local_solidity, Cn, r):
+def update_axial(df, flow_angle, local_solidity, normal_force_coeff):
     """
     Update the axial induction factor based on flow angle, local solidity, and Cn.
 
     Parameters:
     ----------
-    flow_angle : float
-        Flow angle in radians
-    local_solidity : float
-        Local solidity at span position r
-    Cn : float
-        Normal force coefficient
-    r : float
-        Span position in meters
-
+    flow_angle : String
+        Column name for Flow angle in radians
+    local_solidity : String
+        Column name for Local solidity at span position r
+    Cn : String
+        Column name for Normal force coefficient
+    
     Returns:
     -------
     float
         Updated axial induction factor
 
     """
-    axial = 1/(4*sin(flow_angle)**2/(local_solidity(r)*Cn)+1)  # updated axial induction factor
+    phi = df[flow_angle].values  # flow angle in radians
+    sigma = df[local_solidity].values  # local solidity
+    Cn = df[normal_force_coeff].values  # normal force coefficient
+    axial = 1/(4*sin(phi)**2/(sigma*Cn)+1)  # updated axial induction factor
 
     return axial
 
-def update_tangential(flow_angle, local_solidity, Ct, r):
+def update_tangential(df, flow_angle, local_solidity, tangential_force_coeff):   
     """
     Update the tangential induction factor based on flow angle, local solidity, and Ct.
 
@@ -592,7 +596,11 @@ def update_tangential(flow_angle, local_solidity, Ct, r):
         Updated Tangential induction factor
 
     """
-    tangential = 1/(4*cos(flow_angle*sin(flow_angle))/(local_solidity(r)*Ct)-1)  # updated tangential induction factor
+    phi = df[flow_angle].values  # flow angle in radians
+    sigma = df[local_solidity].values  # local solidity
+    Ct = df[tangential_force_coeff].values  # normal force coefficient
+    
+    tangential = 1/(4*cos(phi*sin(phi))/(sigma*Ct)-1)  # updated tangential induction factor
 
     return tangential
 
