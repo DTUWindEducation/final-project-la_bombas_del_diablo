@@ -399,39 +399,37 @@ def compute_flow_angle(axial_factor, tangential_factor,
     
     return phi
 
-def compute_local_angle_of_attack(flow_angles_df, power_curve_df, blade_data_df):
+def compute_local_angle_of_attack(flow_angles_df, pitch_angle, blade_data_df):
     """
-    Calculate the local angle of attack matrix based on flow angles, pitch angles, and twist angles.
+    Calculate the local angle of attack for a single wind speed.
 
     Parameters:
     ----------
     flow_angles_df : pandas.DataFrame
-        DataFrame containing flow angles in degrees with shape (num_spans, num_wind_speeds)
-    power_curve_df : pandas.DataFrame
-        DataFrame containing operational parameters including pitch angles in degrees
+        DataFrame containing flow angles in degrees with shape (num_spans, 1)
+    pitch_angle : float
+        Pitch angle in degrees for the specific wind speed
     blade_data_df : pandas.DataFrame
         DataFrame containing blade geometry data including twist angles in degrees
 
     Returns:
     -------
     pandas.DataFrame
-        DataFrame containing local angles of attack in radians with same shape as flow_angles_df
+        DataFrame containing local angles of attack in degrees with same shape as flow_angles_df
     """
-    # Get the flow angles matrix and convert to radians
+    # Get the flow angles and convert to radians
     phi = flow_angles_df.values * (pi/180)  # Convert degrees to radians
     
-    # Get pitch angle (theta) from power curve for each wind speed
-    theta = power_curve_df['pitch'].values * (pi/180)  # Convert degrees to radians
-    theta = theta.reshape(1, -1)  # Shape: (1, num_wind_speeds) - make it a row vector
+    # Convert pitch angle to radians
+    theta = pitch_angle * (pi/180)  # Convert degrees to radians
     
     # Get twist angle (beta) from blade data for each span position
     beta = blade_data_df['BlTwist'].values * (pi/180)  # Convert degrees to radians
-    beta = beta.reshape(-1, 1)  # Shape: (num_spans, 1) - make it a column vector
+    beta = beta.reshape(-1, 1)  # Shape: (num_spans, 1)
     
-    # Calculate local angle of attack using broadcasting
+    # Calculate local angle of attack
     alpha = phi - (theta + beta)  # Output in radians
-
-    alpha_deg = alpha * (180/pi)  # Convert to degrees for debugging
+    alpha_deg = alpha * (180/pi)  # Convert to degrees
     
     # Convert back to DataFrame with the same structure as flow_angles_df
     alpha_df = pd.DataFrame(
@@ -440,8 +438,12 @@ def compute_local_angle_of_attack(flow_angles_df, power_curve_df, blade_data_df)
         columns=flow_angles_df.columns
     )
     
+    # Add descriptive headers
+    alpha_df.columns.name = 'Span Position (m)'
+    alpha_df.index.name = 'Local Angle of Attack (deg)'
+    
     return alpha_df
-
+    
 # %% Coefficients functions
 def compute_Cn(Cl, Cd, flow_angle):
     """

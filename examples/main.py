@@ -62,14 +62,14 @@ print(flow_angles_df.head())
 print(' \n flow angles shape:', flow_angles_df.shape)
 print(' \n flow angles computed')
 # %% Step 3: Compute the local angle of attack α.
-# alpha = phi - (theta + beta)
-# phi = 50x17 array
-# theta = 1x17 array
-# beta = 1x50 array
-df_local_angle_of_attack = fn.compute_local_angle_of_attack(flow_angles_df, power_curve_df, blade_data_df)
-# print(' \n local angle of attack dataframe:')
-# print(df_local_angle_of_attack.head())
-# print(' \n local angle of attack shape:', df_local_angle_of_attack.shape)
+# Get pitch angle for V_INFLOW
+pitch_angle = power_curve_df['pitch'].iloc[5]  # Get single pitch angle value
+# Compute local angle of attack using single wind speed data
+df_local_angle_of_attack = fn.compute_local_angle_of_attack(flow_angles_df, pitch_angle, blade_data_df)
+
+print(' \n local angle of attack dataframe:')
+print(df_local_angle_of_attack.head())
+print(' \n local angle of attack shape:', df_local_angle_of_attack.shape)
 print(' \n local angle of attack computed')
 
 # %% Step 4: Compute Cl(α) and Cd(α) by interpolation based on the airfoil polars.
