@@ -468,7 +468,7 @@ def compute_Cn(Cl, Cd, flow_angle):
         Normal force coefficient (Cn)
 
     """
-    Cn = Cl * cos(flow_angle) + Cd * sin(flow_angle)  # normal force coefficient
+    Cn = Cl.values * cos(flow_angle.values) + Cd.values * sin(flow_angle.values)  # normal force coefficient
 
     return Cn
 
@@ -495,7 +495,7 @@ def compute_Ct(Cl, Cd, flow_angle):
 
     return Ct
 
-def compute_Ct(rho, A, V_inflow, thrust):
+def compute_CT(rho, A, V_inflow, thrust):
     """
     Compute the thrust coefficient (Ct) based on thrust, air density, rotor area, and inflow velocity.
 

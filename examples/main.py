@@ -90,9 +90,31 @@ angles_df = pd.DataFrame({
 
 # print(angles_df.head())
 # %% Step 4: Compute Cl(α) and Cd(α) by interpolation based on the airfoil polars.
-# we already hàve them??
+#lets use one airfoil, fx the first one
+chosen_airfoil = airfoil_polar['00']
+airfoil_df = pd.DataFrame(chosen_airfoil)
+# print(' \n airfoil df shape:', airfoil_df.shape)
+# print(airfoil_df.head())
+# print(airfoil_df.columns.tolist())
+
+#Interpolate airfoil data at each blade element's angle of attack:
+
+angles_df['Cl'] = np.interp(local_angle_of_attack_deg, airfoil_df['Alpha'], airfoil_df['Cl'])
+angles_df['Cd'] = np.interp(local_angle_of_attack_deg, airfoil_df['Alpha'], airfoil_df['Cd'])
+
+
+
+#airfoil_df['Cn'] = fn.compute_Cn(airfoil_df['Cl'], airfoil_df['Cd'],
+                                #   local_angle_of_attack, flow_angles, ROTATIONAL_SPEED, V_INFLOW)
+
 
 # %% Step 5: Compute Cn and Ct.
+angles_df['Cn'] = fn.compute_Cn(angles_df['Cl'], angles_df['Cd'], angles_df['flow_angle_rad'])
+angles_df['Ct'] = fn.compute_Ct(angles_df['Cl'], angles_df['Cd'], angles_df['flow_angle_rad'])
+
+print('n \Cn and Ct Computed')
+print(angles_df['Cn'])
+print(angles_df['Ct'])
 # Cl = 200x50 values, (50 airfoils and 200 values for each ) 
 # Cd = 200x50 values,
 # fn.compute_Cn
