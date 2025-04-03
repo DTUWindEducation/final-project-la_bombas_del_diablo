@@ -1,5 +1,5 @@
 # %% imports
-print('initializing main.py')
+print('\n initializing main.py')
 """Script for the final project"""
 import os
 from pathlib import Path
@@ -10,7 +10,7 @@ import pandas as pd
 import scipy as sp
 import re
 import functions as fn
-print('imported libraries')
+print(' \n imported libraries')
 
 # %% Load airfoil data
 # Define data directory - will work on any computer
@@ -19,13 +19,23 @@ DATA_DIR = Path(__file__).resolve().parent.parent
 
 # Read the coordinates and polar data for the airfoils
 airfoil_coords, airfoil_polar = fn.read_all_airfoil_files(DATA_DIR / 'inputs' / 'IEA-15-240-RWT' / 'Airfoils')
-print('airfoil data loaded')
+print(' \n airfoil data loaded')
 # %% read powercurve
 power_curve_df = fn.read_power_curve_file(DATA_DIR / 'inputs' / 'IEA-15-240-RWT' / 'IEA_15MW_RWT_Onshore.opt')
-print('power curve data loaded')
+# print(' \n power curve dataframe:')
+# print(' \n power curve shape:', power_curve_df.shape)
+print(' \n power curve data loaded')
+print("Power curve columns:", power_curve_df.columns.tolist())
+# %% read blade data
+blade_data_df = fn.read_blade_data_file(DATA_DIR / 'inputs' / 'IEA-15-240-RWT' / 'IEA-15-240-RWT_AeroDyn15_blade.dat')
+# print(' \n blade data dataframe:')
+print(' \n blade data loaded')
+# print(' \n blade data shape:', blade_data_df.shape)
+# print(blade_data_df.head())
 
 # %% PLOT AIRFOILS
-print('plotting airfoils')
+#print(' \n plotting airfoils')
+#incorporate blade span and twist angle in 3d plot
 #fn.plot_airfoils(airfoil_coords)
 
 # %% CONSTANTS
@@ -36,87 +46,43 @@ HUB_HEIGHT = 150 #M, hub height for IEA 15-240 RWT
 RATED_POWER = 15e6  # W, rated power for IEA 15-240 RWT
 BLADES_NO = 3
 A = pi*ROTOR_RADIUS**2  # m^2, rotor area
-#V_inflow_initial = 8  # m/s, initial inflow velocity
+V_INFLOW = power_curve_df['wind_speed'].iloc[5]  # m/s, initial inflow velocity
+ROTATIONAL_SPEED = power_curve_df['rot_speed'].iloc[5]*(60/(2*pi))  # RAD/S, initial rotational speed
+print('V_INFLOW:', V_INFLOW)
+print('ROTATIONAL_SPEED:', ROTATIONAL_SPEED)
 
-span_positions = np.linspace(0, ROTOR_RADIUS, 50)  # m, span positions from root (0) to tip
-print('constants defined')
-# %% Compute induction factors
+print(' \n constants defined')
 
-# %% Step 1: Initialize a and a', typically a=a'=0
-# power_curve_df['a'] = 0.0  # axial induction factor
-# power_curve_df['a_prime'] = 0.0  # tangential induction factor
-
-# %% Step 2: Step 2: Compute the flow angle ϕ.
-flow_angles_df = fn.flow_angle_loop(span_positions, power_curve_df)
+# %% Step 1 and 2: Step 2: Compute the flow angle ϕ.
+span_positions = blade_data_df['BlSpn'].values  # m, span positions from root (0) to tip
+flow_angles_df = fn.flow_angle_loop(span_positions, V_INFLOW, ROTATIONAL_SPEED)
+print(' \n flow angles df:')
 print(flow_angles_df.head())
-print('flow angles computed')
+# print(shape(flow_angles_df))
+print(' \n flow angles shape:', flow_angles_df.shape)
+print(' \n flow angles computed')
 # %% Step 3: Compute the local angle of attack α.
+# Get pitch angle for V_INFLOW
+pitch_angle = power_curve_df['pitch'].iloc[5]  # Get single pitch angle value
+# Compute local angle of attack using single wind speed data
+df_local_angle_of_attack = fn.compute_local_angle_of_attack(flow_angles_df, pitch_angle, blade_data_df)
+
+print(' \n local angle of attack dataframe:')
+print(df_local_angle_of_attack.head())
+print(' \n local angle of attack shape:', df_local_angle_of_attack.shape)
+print(' \n local angle of attack computed')
+
 # %% Step 4: Compute Cl(α) and Cd(α) by interpolation based on the airfoil polars.
+# we already hàve them??
+
 # %% Step 5: Compute Cn and Ct.
+# Cl = 200x50 values, (50 airfoils and 200 values for each ) 
+# Cd = 200x50 values,
+fn.compute_Cn
+
 # %% Step 6: Update a and a′.
 # %% Step 7: If a and a′ change beyond a set tolerance, return to Step 2; otherwise, continue.
 # %% Step 8: Compute the local contribution to thrust and torque.
 # %% Loop over all blade elements, integrate to get thrust (T) and torque (M), then compute power output.
 # %% Compute thrust coefficient CT and power coefficient CP.
 
-# %% Compute lift and drag coefficients
-# Define span positions and angles of attack
-n_r = 50  # number of radial positions
-n_alpha = 36  # number of angle of attack points
-r_positions = np.linspace(0, ROTOR_RADIUS, n_r)  # m, radial positions from root (0) to tip
-alpha_range = np.linspace(-10, 25, n_alpha)  # degrees
-
-# Initialize matrices to store results
-Cl_matrix = np.zeros((len(r_positions), len(alpha_range)))
-Cd_matrix = np.zeros((len(r_positions), len(alpha_range)))
-
-# Get sorted list of all available airfoil sections
-available_sections = sorted(list(airfoil_polar_data.keys()))
-n_sections = len(available_sections)
-print(f"Using {n_sections} airfoil sections")
-
-# Compute Cl and Cd for each position and angle
-for i, r in enumerate(r_positions):
-    # Normalize radius for airfoil selection
-    r_norm = r / ROTOR_RADIUS
-    
-    # Map normalized radius to available airfoil section
-    section_index = int(round(r_norm * (n_sections - 1)))
-    section = available_sections[section_index]
-    
-    # Get polar data for this section
-    polar = airfoil_polar_data[section]
-    
-    # Interpolate Cl and Cd for each angle of attack
-    Cl_matrix[i, :] = np.interp(alpha_range, polar['Alpha'], polar['Cl'])
-    Cd_matrix[i, :] = np.interp(alpha_range, polar['Alpha'], polar['Cd'])
-
-# Plot results
-plt.figure(figsize=(15, 6))
-
-# Plot Cl
-plt.subplot(121)
-contour_cl = plt.contourf(alpha_range, r_positions/ROTOR_RADIUS, Cl_matrix, levels=20, cmap='viridis')
-plt.colorbar(contour_cl, label='Cl')
-plt.xlabel('Angle of Attack (degrees)')
-plt.ylabel('r/R')
-plt.title('Lift Coefficient Distribution')
-plt.grid(True)
-
-# Plot Cd
-plt.subplot(122)
-contour_cd = plt.contourf(alpha_range, r_positions/ROTOR_RADIUS, Cd_matrix, levels=20, cmap='viridis')
-plt.colorbar(contour_cd, label='Cd')
-plt.xlabel('Angle of Attack (degrees)')
-plt.ylabel('r/R')
-plt.title('Drag Coefficient Distribution')
-plt.grid(True)
-
-plt.tight_layout()
-
-# Save the plot
-save_path = os.path.join(pictures_dir, 'Cl_Cd_Distribution.png')
-plt.savefig(save_path)
-if show_plot:
-    plt.show()
-plt.close()
