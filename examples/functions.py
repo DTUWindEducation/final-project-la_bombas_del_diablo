@@ -201,8 +201,8 @@ def read_airfoil_files(airfoils_dir, file_type='coordinates'):
             print(f"Error reading {file_path.name}: {e}")
     
     print(f"Successfully read {data_description} data. Amount of airfoil data: {len(airfoil_data)}")
-    if airfoil_data and "00" in airfoil_data:
-        print(f'Head of {data_description} data \n {airfoil_data["00"].head()}')
+    # if airfoil_data and "00" in airfoil_data:
+    #     print(f'Head of {data_description} data \n {airfoil_data["00"].head()}')
     
     return airfoil_data
 
@@ -260,6 +260,60 @@ def read_power_curve_file(file_path):
     power_curve_df['rot_speed_rad'] = power_curve_df['rot_speed']*(2*pi/60)  # Convert to rad/s
 
     return power_curve_df
+
+def read_blade_data_file(file_path):
+    """
+    Read a blade data file (.dat) and return a pandas DataFrame.
+    
+    Parameters:
+    ----------
+    file_path : Path or str
+        Path to the blade data file
+        
+    Returns:
+    -------
+    pandas.DataFrame
+        DataFrame containing blade geometry data
+    """
+    with open(file_path, 'r') as f:
+        lines = f.readlines()
+    
+    # Find number of blade nodes
+    num_nodes = None
+    for i, line in enumerate(lines):
+        if 'NumBlNds' in line:
+            parts = line.strip().split()
+            num_nodes = int(parts[0])
+            header_line_idx = i + 1  # Line with column headers
+            units_line_idx = i + 2   # Line with units (m), (deg), etc.
+            data_start_idx = i + 3   # First data line - CHANGED HERE
+            break
+    
+    if num_nodes is None:
+        raise ValueError("Could not find number of blade nodes in file")
+    
+    # Extract column headers
+    headers = lines[header_line_idx].strip().split()
+    
+    # Read data - STARTING AFTER THE UNITS LINE
+    data = []
+    for i in range(data_start_idx, data_start_idx + num_nodes):
+        if i < len(lines):
+            row = lines[i].strip().split()
+            # Convert all values to float
+            row_data = [float(val) for val in row]
+            data.append(row_data)
+    
+    # Create DataFrame
+    df = pd.DataFrame(data, columns=headers)
+    
+    # Add a normalized span column (useful for calculations)
+    if 'BlSpn' in df.columns:
+        blade_length = df['BlSpn'].max()
+        df['r/R'] = df['BlSpn'] / blade_length
+    
+    return df
+
 # %% Math / Physical functions
 
 def local_solidity(r):
@@ -345,29 +399,48 @@ def compute_flow_angle(axial_factor, tangential_factor,
     
     return phi
 
-def compute_local_angle_of_attack(flow_angle, blade_pitch_angle, local_twist_angle, r):
+def compute_local_angle_of_attack(flow_angles_df, power_curve_df, blade_data_df):
     """
-    Calculate the local angle of attack at a given span position.
+    Calculate the local angle of attack matrix based on flow angles, pitch angles, and twist angles.
 
     Parameters:
     ----------
-    flow_angle : float
-        Flow angle in radians
-    blade_pitch_angle : float
-        Blade pitch angle in radians
-    local_twist_angle : float
-        Local twist angle in radians
+    flow_angles_df : pandas.DataFrame
+        DataFrame containing flow angles in degrees with shape (num_spans, num_wind_speeds)
+    power_curve_df : pandas.DataFrame
+        DataFrame containing operational parameters including pitch angles in degrees
+    blade_data_df : pandas.DataFrame
+        DataFrame containing blade geometry data including twist angles in degrees
 
     Returns:
     -------
-    float
-        Local angle of attack in radians
-
+    pandas.DataFrame
+        DataFrame containing local angles of attack in radians with same shape as flow_angles_df
     """
-    beta = local_twist_angle(r)
-    alpha = flow_angle - (blade_pitch_angle + beta)  # local angle of attack
-   
-    return alpha
+    # Get the flow angles matrix and convert to radians
+    phi = flow_angles_df.values * (pi/180)  # Convert degrees to radians
+    
+    # Get pitch angle (theta) from power curve for each wind speed
+    theta = power_curve_df['pitch'].values * (pi/180)  # Convert degrees to radians
+    theta = theta.reshape(1, -1)  # Shape: (1, num_wind_speeds) - make it a row vector
+    
+    # Get twist angle (beta) from blade data for each span position
+    beta = blade_data_df['BlTwist'].values * (pi/180)  # Convert degrees to radians
+    beta = beta.reshape(-1, 1)  # Shape: (num_spans, 1) - make it a column vector
+    
+    # Calculate local angle of attack using broadcasting
+    alpha = phi - (theta + beta)  # Output in radians
+
+    alpha_deg = alpha * (180/pi)  # Convert to degrees for debugging
+    
+    # Convert back to DataFrame with the same structure as flow_angles_df
+    alpha_df = pd.DataFrame(
+        data=alpha_deg,
+        index=flow_angles_df.index,
+        columns=flow_angles_df.columns
+    )
+    
+    return alpha_df
 
 # %% Coefficients functions
 def compute_Cn(Cl, Cd, flow_angle):
@@ -607,40 +680,50 @@ def plot_airfoils(airfoil_coords, show_plot=False):
 
 
 # %% Step 1
-def flow_angle_loop(span_positions, power_curve_df):
+def flow_angle_loop(span_positions, V0, omega):
+    """
+    Calculate flow angles at each span position for a single wind speed.
 
+    Parameters:
+    ----------
+    span_positions : array-like
+        Span positions along the blade (meters)
+    V0 : float
+        Wind speed (m/s)
+    omega : float
+        Rotational speed (rad/s)
+
+    Returns:
+    -------
+    pandas.DataFrame
+        DataFrame containing flow angles in degrees for each span position
+    """
     # Define the axial and tangential induction factors as 0
     a = 0.0  # axial induction factor
     a_prime = 0.0  # tangential induction factor
 
-    # Create a 2D array to store flow angles (span_positions × wind_speeds)
-    flow_angles = np.zeros((len(span_positions), len(power_curve_df)))
-
-    # Loop through each span position and operational point
+    # Create a 1D array for the flow angles
+    flow_angles = np.zeros(len(span_positions))
+    
+    # Calculate flow angle at each span position
     for i, r in enumerate(span_positions):
-        for j, (_, op_point) in enumerate(power_curve_df.iterrows()):
-            # Get wind speed and rotational speed for this operational point
-            V0 = op_point['wind_speed'] # m/s
-            omega = op_point['rot_speed_rad'] # rad/s
-            
-            # Calculate flow angle for this combination
-            # phi = arctan((V0 * (1-a)) / (omega * r * (1+a_prime)))
-            if r > 0:  # Avoid division by zero at blade root
-                phi = compute_flow_angle(a, a_prime, V0, omega, r)
-                
-            else:
-                phi = pi/2  # 90 degrees at root
-            
-            flow_angles[i, j] = phi
-
-    # Convert flow angles from radians to degrees
-    flow_angles = np.degrees(flow_angles)
-
-    # Convert the 2D array to DataFrame with named columns
+        if r > 0:  # Avoid division by zero at blade root
+            flow_angles[i] = compute_flow_angle(a, a_prime, V0, omega, r)
+        else:
+            flow_angles[i] = pi/2  # 90 degrees at root
+    
+    # Convert to degrees
+    flow_angles_deg = np.degrees(flow_angles)
+    
+    # Create a DataFrame with span positions as index and wind speed as column name
     flow_angles_df = pd.DataFrame(
-        flow_angles,
-        index=span_positions,   # Radial positions as row indices
-        columns=power_curve_df['wind_speed'].values  # Wind speeds as column names
+        data=flow_angles_deg,
+        index=span_positions,
+        columns=[V0]  # Use the wind speed as column name
     )
-
+    
+    # Rename the columns with more descriptive headers
+    flow_angles_df.columns.name = 'flow angles (deg)'
+    flow_angles_df.index.name = 'Span Position (m)'
+    
     return flow_angles_df
