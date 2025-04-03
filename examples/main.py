@@ -45,9 +45,10 @@ print('constants defined')
 # %% Step 1: Initialize a and a', typically a=a'=0
 # power_curve_df['a'] = 0.0  # axial induction factor
 # power_curve_df['a_prime'] = 0.0  # tangential induction factor
+
+# %% Step 2: Step 2: Compute the flow angle ϕ.
 flow_angles_df = fn.flow_angle_loop(span_positions, power_curve_df)
 print(flow_angles_df.head())
-# %% Step 2: Step 2: Compute the flow angle ϕ.
 print('flow angles computed')
 # %% Step 3: Compute the local angle of attack α.
 # %% Step 4: Compute Cl(α) and Cd(α) by interpolation based on the airfoil polars.
