@@ -120,7 +120,18 @@ print(angles_df['Ct'])
 # fn.compute_Cn
 
 # %% Step 6: Update a and a′.
+angles_df['local_solidity'] = fn.compute_local_solidity(angles_df, blade_data_df, 'BlChord', 'span_position')
+print(angles_df['local_solidity'])
+
+angles_df['axial_induction'] = fn.update_axial(angles_df, 'flow_angle_rad', 'local_solidity', 'Cn')
+
+print(angles_df['axial_induction'])
+
+angles_df['tangential_induction'] = fn.update_tangential(angles_df, 'flow_angle_rad', 'local_solidity', 'Ct')
+print(angles_df['tangential_induction'])
+
 # %% Step 7: If a and a′ change beyond a set tolerance, return to Step 2; otherwise, continue.
+
 # %% Step 8: Compute the local contribution to thrust and torque.
 # %% Loop over all blade elements, integrate to get thrust (T) and torque (M), then compute power output.
 # %% Compute thrust coefficient CT and power coefficient CP.
