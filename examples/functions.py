@@ -471,7 +471,7 @@ def compute_Cn(Cl, Cd, flow_angle):
         Normal force coefficient (Cn)
 
     """
-    Cn = Cl.values * cos(flow_angle.values) + Cd.values * sin(flow_angle.values)  # normal force coefficient
+    Cn = Cl * cos(flow_angle) + Cd * sin(flow_angle)  # normal force coefficient
 
     return Cn
 
@@ -548,6 +548,31 @@ def compute_Cp(rho, A, V_inflow, power):
     Cp = power / (0.5 * rho * A * V_inflow**3)  # thrust coefficient
 
     return Cp
+
+# %% Total thrust and torque
+def compute_total_loads(thrust_one_blade, torque_one_blade, num_blades):
+    """
+    Calculate total thrust and torque for all blades.
+    
+    Parameters:
+    ----------
+    thrust_one_blade : float
+        Thrust force for one blade (N)
+    torque_one_blade : float
+        Torque for one blade (N·m)
+    num_blades : int
+        Number of blades
+        
+    Returns:
+    -------
+    tuple (float, float)
+        Total thrust (N), Total torque (N·m)
+    """
+    total_thrust = thrust_one_blade * num_blades
+    total_torque = torque_one_blade * num_blades
+    
+    return total_thrust, total_torque
+    
 # %% induction factors
 def update_axial(df, flow_angle, local_solidity, normal_force_coeff):
     """
@@ -600,26 +625,65 @@ def update_tangential(df, flow_angle, local_solidity, tangential_force_coeff):
     sigma = df[local_solidity].values  # local solidity
     Ct = df[tangential_force_coeff].values  # normal force coefficient
     
-    tangential = 1/(4*cos(phi*sin(phi))/(sigma*Ct)-1)  # updated tangential induction factor
+    tangential = 1/(4*sin(phi)*cos(phi)/(sigma*Ct)-1)  # updated tangential induction factor
 
     return tangential
 
 # %% differential functions
-def compute_dT(r, rho, V_inflow, axial_factor): #REVISE THIS FUNCTION
+def compute_dT(r, dr, rho, V_inflow, axial_factor):
+    """
+    Compute differential thrust at a blade element.
+    
+    Parameters:
+    ----------
+    r : float
+        Local radius
+    dr : float
+        Differential element length
+    rho : float
+        Air density
+    V_inflow : float
+        Inflow velocity
+    axial_factor : float
+        Local axial induction factor
+        
+    Returns:
+    -------
+    float
+        Differential thrust
+    """
+    dT = 4 * pi * r * rho * V_inflow**2 * axial_factor * (1 - axial_factor) * dr
+    return dT
 
-    dr = 0.01  # differential span position
-    for radius in range(0, ROTOR_RADIUS, dr):
-        axial_factor = update_axial(flow_angle, local_solidity, Cn, radius)
-        tangential_factor = update_tangential(flow_angle, local_solidity, Ct, radius)
-        dT = 4*pi*r*rho*V_inflow**2*axial_factor*(1-axial_factor)*radius  # differential thrust
+def compute_dM(r, dr, rho, V_inflow, axial_factor, tangential_factor, omega):
+    """
+    Compute differential torque at a blade element.
+    
+    Parameters:
+    ----------
+    r : float
+        Local radius
+    dr : float
+        Differential element length
+    rho : float
+        Air density
+    V_inflow : float
+        Inflow velocity
+    axial_factor : float
+        Local axial induction factor
+    tangential_factor : float
+        Local tangential induction factor
+    omega : float
+        Rotational speed in rad/s
+        
+    Returns:
+    -------
+    float
+        Differential torque
+    """
+    dM = 4 * pi * r**3 * rho * V_inflow * omega * tangential_factor * (1 - axial_factor) * dr
 
-def compute_dm(r, rho, V_inflow, axial_factor, tangential_factor, rotational_speed): #REVISE THIS FUNCTION
-
-    dr = 0.01  # differential span position
-    for radius in range(0, ROTOR_RADIUS, dr):
-        axial_factor = update_axial(flow_angle, local_solidity, Cn, radius)
-        tangential_factor = update_tangential(flow_angle, local_solidity, Ct, radius)
-        dT = 4*pi*r**3*rho*V_inflow*rotational_speed*tangential_factor*(1-axial_factor)*radius  # differential thrust
+    return dM
 
 # %% Power
 def compute_aerodynamic_power(torque, rotational_speed):

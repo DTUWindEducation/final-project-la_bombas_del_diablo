@@ -133,6 +133,65 @@ print(angles_df['tangential_induction'])
 # %% Step 7: If a and a′ change beyond a set tolerance, return to Step 2; otherwise, continue.
 
 # %% Step 8: Compute the local contribution to thrust and torque.
+
+# Initialize arrays to store dT and dM values for each element
+num_elements = len(angles_df)
+dT_values = np.zeros(num_elements)
+dM_values = np.zeros(num_elements)
+
+# Calculate dr for all elements
+dr_values = np.diff(angles_df['span_position'].values, prepend=angles_df['span_position'].values[0])
+
+# Calculate differential thrust and torque for all elements at once
+dT_values = fn.compute_dT(angles_df['span_position'].values, 
+                         dr_values, 
+                         RHO, 
+                         V_INFLOW, 
+                         angles_df['axial_induction'].values)
+
+dM_values = fn.compute_dM(angles_df['span_position'].values, 
+                         dr_values, 
+                         RHO, 
+                         V_INFLOW,
+                         angles_df['axial_induction'].values,
+                         angles_df['tangential_induction'].values,
+                         ROTATIONAL_SPEED)
+
+# Add dT and dM values to the dataframe
+angles_df['dT'] = dT_values
+angles_df['dM'] = dM_values
+
+print("\nDifferential thrust and torque values along blade:")
+print(angles_df[['span_position', 'dT', 'dM']])
+print(' \n dT and dM computed')
+
+# Calculate total thrust and torque for one blade
+total_thrust_one_blade = np.sum(dT_values)
+total_torque_one_blade = np.sum(dM_values)
+
+# Calculate total thrust and torque for all blades using the new function
+total_thrust, total_torque = fn.compute_total_loads(total_thrust_one_blade, 
+                                                   total_torque_one_blade, 
+                                                   BLADES_NO)
+
+# Calculate aerodynamic power
+aero_power = fn.compute_aerodynamic_power(total_torque, ROTATIONAL_SPEED)
+
+print(' \n Power computed')
+
+# Calculate thrust and power coefficients
+thrust_coeff = fn.compute_CT(RHO, A, V_INFLOW, total_thrust)
+power_coeff = fn.compute_Cp(RHO, A, V_INFLOW, aero_power)
+
+print("\nResults:")
+print(f"Total thrust: {total_thrust:.2f} N")
+print(f"Total torque: {total_torque:.2f} N·m")
+print(f"Aerodynamic power: {aero_power/1e6:.2f} MW")
+print(f"Thrust coefficient (CT): {thrust_coeff:.3f}")
+print(f"Power coefficient (CP): {power_coeff:.3f}")
+
+print(' \n CT and CP computed')
+
 # %% Loop over all blade elements, integrate to get thrust (T) and torque (M), then compute power output.
 # %% Compute thrust coefficient CT and power coefficient CP.
 
