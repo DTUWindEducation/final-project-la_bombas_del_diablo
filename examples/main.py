@@ -8,6 +8,7 @@ import numpy as np
 from numpy import cos, sin, pi, sqrt, tan, arctan, arcsin, arccos
 import pandas as pd
 import scipy as sp
+from mpl_toolkits.mplot3d import Axes3D  # Import for 3D plotting
 import re
 import functions as fn
 print(' \n imported libraries')
@@ -36,7 +37,13 @@ print(' \n blade data loaded')
 # %% PLOT AIRFOILS
 #print(' \n plotting airfoils')
 #incorporate blade span and twist angle in 3d plot
-#fn.plot_airfoils(airfoil_coords)
+# blade_span = blade_data_df['BlSpn'].values  # m, span positions from root (0) to tip
+# blade_twist = blade_data_df['BlTwist'].values  # degrees, twist angles at corresponding span positions
+
+
+
+fn.plot_airfoils_3d(airfoil_coords, blade_data_df['BlSpn'], blade_data_df['BlTwist'], show_plot=False)
+# fn.plot_airfoils(airfoil_coords)
 
 # %% CONSTANTS
 # Define constants
@@ -48,7 +55,8 @@ BLADES_NO = 3
 A = pi*ROTOR_RADIUS**2  # m^2, rotor area
 V_INFLOW = power_curve_df['wind_speed'].iloc[4]  # m/s, initial inflow velocity
 ROTATIONAL_SPEED = power_curve_df['rot_speed'].iloc[4]*(60/(2*pi))  # RAD/S, initial rotational speed
-PITCH_ANGLE = power_curve_df['pitch'].iloc[4]  # degrees, initial pitch angle
+PITCH_ANGLE_DEG = power_curve_df['pitch'].iloc[4]  # degrees, initial pitch angle
+PITCH_ANGLE_RAD = PITCH_ANGLE_DEG * (pi / 180)  # convert to radians
 # print('V_INFLOW:', V_INFLOW)
 # print('ROTATIONAL_SPEED:', ROTATIONAL_SPEED)
 # print('PITCH_ANGLE:', PITCH_ANGLE)
@@ -56,22 +64,15 @@ PITCH_ANGLE = power_curve_df['pitch'].iloc[4]  # degrees, initial pitch angle
 print(' \n constants defined')
 
 # %% Step 1 and 2: Step 2: Compute the flow angle ϕ.
-# span_positions = blade_data_df['BlSpn'].values  # m, span positions from root (0) to tip
 axial_induction = 0.0  # axial induction factor (assumed constant for simplicity)
 tangential_induction = 0.0  # tangential induction factor (assumed constant for simplicity)
 
-flow_angles = fn.compute_flow_angle(blade_data_df, 'BlSpn', axial_induction, tangential_induction,
-                                    V_INFLOW, ROTATIONAL_SPEED)
-# flow_angles_df = fn.flow_angle_loop(span_positions, V_INFLOW, ROTATIONAL_SPEED)
-# print(' \n flow angles df:')
-# print(flow_angles)
-# print(shape(flow_angles_df))
-# print(' \n flow angles shape:', flow_angles.shape)
+#compute flow angle for all blade elements in radians
+flow_angles = fn.compute_flow_angle(blade_data_df, 'BlSpn', axial_induction,
+                                    tangential_induction, V_INFLOW, ROTATIONAL_SPEED)
 print(' \n flow angles computed')
 # %% Step 3: Compute the local angle of attack α.
-# Get pitch angle for V_INFLOW
-# Compute local angle of attack using single wind speed data
-local_angle_of_attack, local_angle_of_attack_deg  = fn.compute_local_angle_of_attack(flow_angles, PITCH_ANGLE, blade_data_df, 'BlTwist')
+local_angle_of_attack, local_angle_of_attack_deg  = fn.compute_local_angle_of_attack(flow_angles, PITCH_ANGLE_RAD, blade_data_df, 'BlTwist')
 
 # print(' \n local angle of attack array (deg):')
 # print(local_angle_of_attack_deg)
@@ -88,47 +89,54 @@ angles_df = pd.DataFrame({
     
 })
 
-# print(angles_df.head())
+# print(angles_df)
 # %% Step 4: Compute Cl(α) and Cd(α) by interpolation based on the airfoil polars.
 #lets use one airfoil, fx the first one
-chosen_airfoil = airfoil_polar['00']
+chosen_airfoil = airfoil_polar['25'] #take the middle airfoil
 airfoil_df = pd.DataFrame(chosen_airfoil)
 # print(' \n airfoil df shape:', airfoil_df.shape)
 # print(airfoil_df.head())
 # print(airfoil_df.columns.tolist())
 
 #Interpolate airfoil data at each blade element's angle of attack:
+# print(' check interpolation function (debugging)')
+
+# print('local angle of attack:', local_angle_of_attack_deg[-1])
+# Cl = np.interp(local_angle_of_attack_deg[-1], airfoil_df['Alpha'], airfoil_df['Cl'])
+# Cd = np.interp(local_angle_of_attack_deg[-1], airfoil_df['Alpha'], airfoil_df['Cd'])
+# print(f'Cl: {Cl}')
+# print(f'Cd: {Cd}')
 
 angles_df['Cl'] = np.interp(local_angle_of_attack_deg, airfoil_df['Alpha'], airfoil_df['Cl'])
 angles_df['Cd'] = np.interp(local_angle_of_attack_deg, airfoil_df['Alpha'], airfoil_df['Cd'])
 
 
-
-#airfoil_df['Cn'] = fn.compute_Cn(airfoil_df['Cl'], airfoil_df['Cd'],
-                                #   local_angle_of_attack, flow_angles, ROTATIONAL_SPEED, V_INFLOW)
-
-
 # %% Step 5: Compute Cn and Ct.
-angles_df['Cn'] = fn.compute_Cn(angles_df['Cl'], angles_df['Cd'], angles_df['flow_angle_rad'])
-angles_df['Ct'] = fn.compute_Ct(angles_df['Cl'], angles_df['Cd'], angles_df['flow_angle_rad'])
+angles_df['Cn'] = fn.compute_normal_coeff(angles_df['Cl'], angles_df['Cd'], angles_df['flow_angle_rad']) #50 values
+angles_df['Ct'] = fn.compute_tangential_coeff(angles_df['Cl'], angles_df['Cd'], angles_df['flow_angle_rad']) #50 values 
 
 print('n \Cn and Ct Computed')
-print(angles_df['Cn'])
-print(angles_df['Ct'])
-# Cl = 200x50 values, (50 airfoils and 200 values for each ) 
-# Cd = 200x50 values,
-# fn.compute_Cn
+# print(angles_df['Cn'])
+# print(angles_df['Ct']) 
+
 
 # %% Step 6: Update a and a′.
-angles_df['local_solidity'] = fn.compute_local_solidity(angles_df, blade_data_df, 'BlChord', 'span_position')
-print(angles_df['local_solidity'])
+angles_df['local_solidity'] = fn.compute_local_solidity(blade_data_df, 'BlChord', 'BlSpn')
+# print(angles_df['local_solidity'])
 
 angles_df['axial_induction'] = fn.update_axial(angles_df, 'flow_angle_rad', 'local_solidity', 'Cn')
 
-print(angles_df['axial_induction'])
+# print(angles_df['axial_induction'])
 
 angles_df['tangential_induction'] = fn.update_tangential(angles_df, 'flow_angle_rad', 'local_solidity', 'Ct')
-print(angles_df['tangential_induction'])
+# print(angles_df['tangential_induction'])
+
+# print("Flow angle range:", angles_df['flow_angle_deg'])
+# print("Local Solidity Range (sigma):", angles_df['local_solidity'])
+# print("Tangential Force Coefficient (Ct) Range:", angles_df['Ct'])
+
+
+
 
 # %% Step 7: If a and a′ change beyond a set tolerance, return to Step 2; otherwise, continue.
 
@@ -140,7 +148,8 @@ dT_values = np.zeros(num_elements)
 dM_values = np.zeros(num_elements)
 
 # Calculate dr for all elements
-dr_values = np.diff(angles_df['span_position'].values, prepend=angles_df['span_position'].values[0])
+# make array of differential span values
+dr_values = np.diff(angles_df['span_position'].values, prepend=angles_df['span_position'].values[0]) # 
 
 # Calculate differential thrust and torque for all elements at once
 dT_values = fn.compute_dT(angles_df['span_position'].values, 
@@ -162,7 +171,7 @@ angles_df['dT'] = dT_values
 angles_df['dM'] = dM_values
 
 print("\nDifferential thrust and torque values along blade:")
-print(angles_df[['span_position', 'dT', 'dM']])
+# print(angles_df[['span_position', 'dT', 'dM']])
 print(' \n dT and dM computed')
 
 # Calculate total thrust and torque for one blade
@@ -170,9 +179,8 @@ total_thrust_one_blade = np.sum(dT_values)
 total_torque_one_blade = np.sum(dM_values)
 
 # Calculate total thrust and torque for all blades using the new function
-total_thrust, total_torque = fn.compute_total_loads(total_thrust_one_blade, 
-                                                   total_torque_one_blade, 
-                                                   BLADES_NO)
+total_thrust = total_thrust_one_blade * BLADES_NO
+total_torque = total_torque_one_blade * BLADES_NO
 
 # Calculate aerodynamic power
 aero_power = fn.compute_aerodynamic_power(total_torque, ROTATIONAL_SPEED)
@@ -180,8 +188,8 @@ aero_power = fn.compute_aerodynamic_power(total_torque, ROTATIONAL_SPEED)
 print(' \n Power computed')
 
 # Calculate thrust and power coefficients
-thrust_coeff = fn.compute_CT(RHO, A, V_INFLOW, total_thrust)
-power_coeff = fn.compute_Cp(RHO, A, V_INFLOW, aero_power)
+thrust_coeff = fn.compute_thrust_coeff(RHO, A, V_INFLOW, total_thrust)
+power_coeff = fn.compute_power_coeff(RHO, A, V_INFLOW, aero_power)
 
 print("\nResults:")
 print(f"Total thrust: {total_thrust:.2f} N")
@@ -195,3 +203,5 @@ print(' \n CT and CP computed')
 # %% Loop over all blade elements, integrate to get thrust (T) and torque (M), then compute power output.
 # %% Compute thrust coefficient CT and power coefficient CP.
 
+
+print(' \n finished main.py')

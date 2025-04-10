@@ -316,26 +316,35 @@ def read_blade_data_file(file_path):
 
 # %% Math / Physical functions
 
-def compute_local_solidity(df_angles, blade_data_df, chord_length, span_position):
+def compute_local_solidity(blade_data_df, chord_length, span_position):
     """
     Calculate local solidity based on span position (r).
     
     Parameters:
     ----------
-    r : float
-        Span position (r) in meters
+    df_angles : DataFrame
+        DataFrame containing span positions and related blade angles.
         
+    blade_data_df : DataFrame
+        DataFrame containing the chord lengths at each span position.
+        
+    chord_length : str
+        Column name in blade_data_df containing the chord lengths at each span position.
+        
+    span_position : str
+        Column name in df_angles containing the span positions (r) in meters.
+
     Returns:
     -------
     float
         Local solidity at span position r
     """
-    B = 3 #number of blades
+    B = 3 # number of blades
     c = blade_data_df[chord_length].values  # chord length in meters
-    r = df_angles[span_position].values  # span position in meters
+    r = blade_data_df[span_position].values  # span position in meters
     # Fixed: use np.clip to avoid division by zero
     r = np.clip(r, 1e-6, None)  # Avoid division by zero
-    sigma = c*B/(2*pi*r)  # local solidity
+    sigma = (c * B) / (2 * pi * r)  # Local solidity formula
 
     return sigma
 
@@ -361,7 +370,7 @@ def tip_speed_ratio(rotational_speed, ROTOR_RADIUS, V_inflow):
 
     return TSR
 
-# %% angles
+# %% compute angles
 def compute_flow_angle(df, span_position, axial_factor, tangential_factor,
                        v_inflow, rotational_speed):
     """
@@ -400,33 +409,39 @@ def compute_flow_angle(df, span_position, axial_factor, tangential_factor,
             phi[i] = (pi/2)  # 90 degrees at root
         else:
             # Fixed: proper indexing and parentheses for correct calculation
-            phi[i] = arctan(((1-a) * V0) / ((1 + a_prime) * omega * r))
+            phi[i] = arctan(((1-a) * V0) / ((1 + a_prime) * omega * r)) # flow angle in radians
     
-    return phi  # np array
+    return phi  # np array of flow angles in radians
 
 def compute_local_angle_of_attack(flow_angles, PITCH_ANGLE, blade_data_df, blade_twist):
     """
-    Calculate the local angle of attack for a single wind speed.
+    Update the axial induction factor based on flow angle, local solidity, and Cn.
 
     Parameters:
     ----------
-    flow_angles_df : pandas.DataFrame
-        DataFrame containing flow angles in degrees with shape (num_spans, 1)
-    pitch_angle : float
-        Pitch angle in degrees for the specific wind speed
-    blade_data_df : pandas.DataFrame
-        DataFrame containing blade geometry data including twist angles in degrees
-
+    df : DataFrame
+        The input dataframe containing the necessary columns for flow angle, 
+        local solidity, and normal force coefficient.
+    
+    flow_angle : str
+        Column name for flow angle in radians.
+    
+    local_solidity : str
+        Column name for local solidity at span position r.
+    
+    normal_force_coeff : str
+        Column name for normal force coefficient (Cn).
+    
     Returns:
     -------
-    pandas.DataFrame
-        DataFrame containing local angles of attack in degrees with same shape as flow_angles_df
+    ndarray
+        Array of updated axial induction factors for each span position.ontaining local angles of attack in degrees with same shape as flow_angles_df
     """
-    # Get the flow angles and convert to radians
-    phi = flow_angles * (pi/180)  # 50x1 array
+    # Get the flow angles 
+    phi = flow_angles   # 50x1 array
     
     # Convert pitch angle to radians
-    theta = PITCH_ANGLE * (pi/180)  # SCALAR
+    theta = PITCH_ANGLE  # pitch angle in radians
     
     # Get twist angle (beta) from blade data for each span position in radians
     beta = blade_data_df[blade_twist].values * (pi/180)  # 50x1 array
@@ -434,25 +449,14 @@ def compute_local_angle_of_attack(flow_angles, PITCH_ANGLE, blade_data_df, blade
     
     # Calculate local angle of attack
     # Output in radians
-    alpha = phi - (theta + beta)  # 50x1 array
+    alpha_rad = phi - (theta + beta)  # 50x1 array
     # Convert to degrees
-    alpha_deg = alpha * (180/pi)  # 50x1 array
-    
-    # # Convert back to DataFrame with the same structure as flow_angles_df
-    # alpha_df = pd.DataFrame(
-    #     data=alpha_deg,
-    #     index=flow_angles_df.index,
-    #     columns=flow_angles_df.columns
-    # )
-    
-    # # Add descriptive headers
-    # alpha_df.columns.name = 'Span Position (m)'
-    # alpha_df.index.name = 'Local Angle of Attack (deg)'
-    
-    return alpha, alpha_deg
+    alpha_deg = alpha_rad * (180/pi)  # 50x1 array
+        
+    return alpha_rad, alpha_deg
     
 # %% Coefficients functions
-def compute_Cn(Cl, Cd, flow_angle):
+def compute_normal_coeff(Cl, Cd, flow_angle):
     """
     Compute the normal force coefficient (Cn) based on Cl, flow angle, and Cd.
 
@@ -475,7 +479,7 @@ def compute_Cn(Cl, Cd, flow_angle):
 
     return Cn
 
-def compute_Ct(Cl, Cd, flow_angle):
+def compute_tangential_coeff(Cl, Cd, flow_angle):
     """
     Compute the tangential force coefficient (Ct) based on Cl, flow angle, and Cd.
 
@@ -498,7 +502,7 @@ def compute_Ct(Cl, Cd, flow_angle):
 
     return Ct
 
-def compute_CT(rho, A, V_inflow, thrust):
+def compute_thrust_coeff(rho, A, V_inflow, thrust):
     """
     Compute the thrust coefficient (Ct) based on thrust, air density, rotor area, and inflow velocity.
 
@@ -523,7 +527,7 @@ def compute_CT(rho, A, V_inflow, thrust):
 
     return Ct
 
-def compute_Cp(rho, A, V_inflow, power):
+def compute_power_coeff(rho, A, V_inflow, power):
     
     """
     Compute the thrust coefficient (Ct) based on thrust, air density, rotor area, and inflow velocity.
@@ -580,23 +584,29 @@ def update_axial(df, flow_angle, local_solidity, normal_force_coeff):
 
     Parameters:
     ----------
-    flow_angle : String
-        Column name for Flow angle in radians
-    local_solidity : String
-        Column name for Local solidity at span position r
-    Cn : String
-        Column name for Normal force coefficient
+    df : DataFrame
+        The input dataframe containing the necessary columns for flow angle, 
+        local solidity, and normal force coefficient.
+    
+    flow_angle : str
+        Column name for flow angle in radians.
+    
+    local_solidity : str
+        Column name for local solidity at span position r.
+    
+    normal_force_coeff : str
+        Column name for normal force coefficient (Cn).
     
     Returns:
     -------
-    float
-        Updated axial induction factor
+    ndarray
+        Array of updated axial induction factors for each span position.
 
     """
     phi = df[flow_angle].values  # flow angle in radians
     sigma = df[local_solidity].values  # local solidity
     Cn = df[normal_force_coeff].values  # normal force coefficient
-    axial = 1/(4*sin(phi)**2/(sigma*Cn)+1)  # updated axial induction factor
+    axial = 1 / (4 * (sin(phi) ** 2) / (sigma * Cn) + 1) # updated axial induction factor
 
     return axial
 
@@ -625,7 +635,7 @@ def update_tangential(df, flow_angle, local_solidity, tangential_force_coeff):
     sigma = df[local_solidity].values  # local solidity
     Ct = df[tangential_force_coeff].values  # normal force coefficient
     
-    tangential = 1/(4*sin(phi)*cos(phi)/(sigma*Ct)-1)  # updated tangential induction factor
+    tangential = 1 / (4 * (sin(phi) * cos(phi)) / (sigma * Ct) - 1)
 
     return tangential
 
@@ -756,6 +766,62 @@ def plot_airfoils(airfoil_coords, show_plot=False):
         plt.close()
     print(f"Saved {len(airfoil_coords)} airfoil plots to {pictures_dir}")
 
+def plot_airfoils_3d(airfoil_coords, blade_span, blade_twist, show_plot=False):
+    """
+    Plot airfoil coordinates in 3D, incorporating blade span and twist angle.
+    
+    Parameters:
+    ----------
+    airfoil_coords : dict
+        Dictionary of airfoil coordinates
+    blade_span : array-like
+        Blade span positions from root to tip
+    blade_twist : array-like
+        Twist angles at corresponding blade span positions
+    show_plot : bool
+        Whether to display the plot interactively
+    
+    Returns:
+    -------
+    None
+        Saves the plot to the specified directory
+    """
+    fig = plt.figure(figsize=(12, 8))
+    ax = fig.add_subplot(111, projection='3d')
+
+    for i, airfoil_num in enumerate(airfoil_coords):
+        # Get airfoil coordinates
+        x = airfoil_coords[airfoil_num]['x/c']
+        y = airfoil_coords[airfoil_num]['y/c']
+        z = np.full_like(x, blade_span.values[i])  # Set z-axis as blade span position
+
+        # Apply twist angle (rotation around z-axis)
+        twist_angle_rad = np.radians(blade_twist.values[i])
+        x_rot = x * np.cos(twist_angle_rad) - y * np.sin(twist_angle_rad)
+        y_rot = x * np.sin(twist_angle_rad) + y * np.cos(twist_angle_rad)
+
+        # Plot the airfoil in 3D
+        ax.plot(x_rot, y_rot, z, label=f'Airfoil {airfoil_num}')
+
+    ax.set_xlabel('x/c')
+    ax.set_ylabel('y/c')
+    ax.set_zlabel('Blade Span (m)')
+    ax.set_title('3D Airfoil Geometry with Blade Span and Twist')
+    #ax.legend()
+    ax.grid(True)
+
+    # Define path to save figures
+    main_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    pictures_dir = os.path.join(main_dir, 'final-project-la_bombas_del_diablo', 'outputs', 'pictures')
+    os.makedirs(pictures_dir, exist_ok=True)  # Ensure the directory exists
+
+    save_path = os.path.join(pictures_dir, '3D_Airfoil_Geometry.png')
+    plt.savefig(save_path)
+    print(f'Saved 3D airfoil plot to {save_path}')
+
+    if show_plot:
+        plt.show()
+    plt.close()
 
 # %% Step 1
 def flow_angle_loop(span_positions, V0, omega):
