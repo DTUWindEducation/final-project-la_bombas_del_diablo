@@ -402,14 +402,15 @@ def compute_flow_angle(df, span_position, axial_factor, tangential_factor,
     V0 = v_inflow  # inflow velocity
     radius = df[span_position].values  # span position in meters (np array)
     phi = np.zeros(len(radius))  # Initialize flow angle array
+    # Avoid division by zero at blade root
+    # Fixed: use np.clip to avoid division by zero
+    radius = np.clip(radius, 1e-6, None)  # Avoid division by zero
 
     # Calculate flow angle for each radius
     for i, r in enumerate(radius):
-        if r == 0:
-            phi[i] = (pi/2)  # 90 degrees at root
-        else:
-            # Fixed: proper indexing and parentheses for correct calculation
-            phi[i] = arctan(((1-a) * V0) / ((1 + a_prime) * omega * r)) # flow angle in radians
+        phi[i] = arctan(((1-a) * V0) / ((1 + a_prime) * omega * r)) # flow angle in radians
+       
+
     
     return phi  # np array of flow angles in radians
 
@@ -578,7 +579,7 @@ def compute_total_loads(thrust_one_blade, torque_one_blade, num_blades):
     return total_thrust, total_torque
     
 # %% induction factors
-def update_axial(df, flow_angle, local_solidity, normal_force_coeff):
+def update_axial(df, flow_angle, local_solidity, normal_force_coeff, BLADES_NO, ROTOR_RADIUS):
     """
     Update the axial induction factor based on flow angle, local solidity, and Cn.
 
@@ -606,7 +607,14 @@ def update_axial(df, flow_angle, local_solidity, normal_force_coeff):
     phi = df[flow_angle].values  # flow angle in radians
     sigma = df[local_solidity].values  # local solidity
     Cn = df[normal_force_coeff].values  # normal force coefficient
+    radius = df['span_position'].values
     axial = 1 / (4 * (sin(phi) ** 2) / (sigma * Cn) + 1) # updated axial induction factor
+    # implement prandtl tip loss factor when span position is approaching the rotor radius
+    # F = 2 / pi * arccos(exp((-B * BLADES_NO * (ROTOR_RADIUS - radius))/(2*radius*sin(phi)))) # Prandtl tip loss factor
+    
+    # if F is not None:
+    #     axial = axial * F
+
 
     return axial
 
@@ -822,6 +830,51 @@ def plot_airfoils_3d(airfoil_coords, blade_span, blade_twist, show_plot=False):
     if show_plot:
         plt.show()
     plt.close()
+
+def plot_cd_cl(angles_df, show_plot=False):
+    fig, ax = plt.subplots()
+    ax.plot(angles_df['Cl'], angles_df['Cd'], label='Cd vs Cl')
+    ax.set_xlabel('Cl')
+    ax.set_ylabel('Cd')
+    ax.set_title('Cd vs Cl')
+    ax.legend()
+    plt.grid()
+    if show_plot:
+        plt.show()
+    # Define path to save figures
+    main_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    pictures_dir = os.path.join(main_dir, 'final-project-la_bombas_del_diablo', 'outputs', 'pictures')
+    os.makedirs(pictures_dir, exist_ok=True)  # Ensure the directory exists
+
+    save_path = os.path.join(pictures_dir, 'cd_vs_cl.png')
+    plt.savefig(save_path)
+    print(f'Saved cd_vs_cl plot to {save_path}')
+
+def plot_clcd_vs_alpha(angles_df, show_plot=False):
+    fig, ax = plt.subplots()
+    ax.plot(angles_df['local_angle_of_attack_deg'], np.divide(angles_df['Cl'],angles_df['Cd']), label='Cl/Cd vs Alpha')
+    # ax.plot(airfoil_df['Alpha'], airfoil_df['Cd'], label='Cd vs Alpha')
+    ax.set_xlabel('Angle of Attack (degrees)')
+    ax.set_ylabel('Cl/Cd')
+    ax.set_title('Cl and Cd vs Angle of Attack')
+    ax.legend()
+    plt.grid()
+    
+    if show_plot:
+        plt.show()
+    # Define path to save figures
+    main_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    pictures_dir = os.path.join(main_dir, 'final-project-la_bombas_del_diablo', 'outputs', 'pictures')
+    os.makedirs(pictures_dir, exist_ok=True)  # Ensure the directory exists
+
+    save_path = os.path.join(pictures_dir, 'clcd_vs_alpha.png')
+    plt.savefig(save_path)
+    print(f'Saved clcd_vs_alpha plot to {save_path}')
+
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
 
 # %% Step 1
 def flow_angle_loop(span_positions, V0, omega):

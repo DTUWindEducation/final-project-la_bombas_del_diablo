@@ -53,9 +53,10 @@ HUB_HEIGHT = 150 #M, hub height for IEA 15-240 RWT
 RATED_POWER = 15e6  # W, rated power for IEA 15-240 RWT
 BLADES_NO = 3
 A = pi*ROTOR_RADIUS**2  # m^2, rotor area
-V_INFLOW = power_curve_df['wind_speed'].iloc[4]  # m/s, initial inflow velocity
-ROTATIONAL_SPEED = power_curve_df['rot_speed'].iloc[4]*(60/(2*pi))  # RAD/S, initial rotational speed
-PITCH_ANGLE_DEG = power_curve_df['pitch'].iloc[4]  # degrees, initial pitch angle
+POWER_CURVE_INDICE = 4
+V_INFLOW = power_curve_df['wind_speed'].iloc[POWER_CURVE_INDICE]  # m/s, initial inflow velocity
+ROTATIONAL_SPEED = power_curve_df['rot_speed'].iloc[POWER_CURVE_INDICE]*((2*pi)/60)  # RAD/S, initial rotational speed
+PITCH_ANGLE_DEG = power_curve_df['pitch'].iloc[POWER_CURVE_INDICE]  # degrees, initial pitch angle
 PITCH_ANGLE_RAD = PITCH_ANGLE_DEG * (pi / 180)  # convert to radians
 # print('V_INFLOW:', V_INFLOW)
 # print('ROTATIONAL_SPEED:', ROTATIONAL_SPEED)
@@ -70,12 +71,14 @@ tangential_induction = 0.0  # tangential induction factor (assumed constant for 
 #compute flow angle for all blade elements in radians
 flow_angles = fn.compute_flow_angle(blade_data_df, 'BlSpn', axial_induction,
                                     tangential_induction, V_INFLOW, ROTATIONAL_SPEED)
+# print(flow_angles*180/pi)
 print(' \n flow angles computed')
 # %% Step 3: Compute the local angle of attack α.
-local_angle_of_attack, local_angle_of_attack_deg  = fn.compute_local_angle_of_attack(flow_angles, PITCH_ANGLE_RAD, blade_data_df, 'BlTwist')
+local_angle_of_attack, local_angle_of_attack_deg  = fn.compute_local_angle_of_attack(flow_angles, PITCH_ANGLE_RAD, blade_data_df,
+                                                                                     'BlTwist')
 
-# print(' \n local angle of attack array (deg):')
-# print(local_angle_of_attack_deg)
+print(' \n local angle of attack array (deg):')
+print(local_angle_of_attack_deg)
 # print(' \n local angle of attack shape:', local_angle_of_attack_deg.shape)
 print(' \n local angle of attack computed')
 
@@ -86,7 +89,7 @@ angles_df = pd.DataFrame({
     'local_angle_of_attack_deg': local_angle_of_attack_deg,
     'flow_angle_rad': flow_angles,
     'local_angle_of_attack_rad': local_angle_of_attack
-    
+
 })
 
 # print(angles_df)
@@ -113,23 +116,23 @@ angles_df['Cd'] = np.interp(local_angle_of_attack_deg, airfoil_df['Alpha'], airf
 
 # %% Step 5: Compute Cn and Ct.
 angles_df['Cn'] = fn.compute_normal_coeff(angles_df['Cl'], angles_df['Cd'], angles_df['flow_angle_rad']) #50 values
-angles_df['Ct'] = fn.compute_tangential_coeff(angles_df['Cl'], angles_df['Cd'], angles_df['flow_angle_rad']) #50 values 
+angles_df['Ct'] = fn.compute_tangential_coeff(angles_df['Cl'], angles_df['Cd'], angles_df['flow_angle_rad']) #50 values
 
 print('n \Cn and Ct Computed')
 # print(angles_df['Cn'])
-# print(angles_df['Ct']) 
+# print(angles_df['Ct'])
 
 
 # %% Step 6: Update a and a′.
 angles_df['local_solidity'] = fn.compute_local_solidity(blade_data_df, 'BlChord', 'BlSpn')
 # print(angles_df['local_solidity'])
 
-angles_df['axial_induction'] = fn.update_axial(angles_df, 'flow_angle_rad', 'local_solidity', 'Cn')
+angles_df['axial_induction'] = fn.update_axial(angles_df, 'flow_angle_rad', 'local_solidity', 'Cn', BLADES_NO, ROTOR_RADIUS)
 
-# print(angles_df['axial_induction'])
+print(angles_df['axial_induction'])
 
 angles_df['tangential_induction'] = fn.update_tangential(angles_df, 'flow_angle_rad', 'local_solidity', 'Ct')
-# print(angles_df['tangential_induction'])
+print(angles_df['tangential_induction'])
 
 # print("Flow angle range:", angles_df['flow_angle_deg'])
 # print("Local Solidity Range (sigma):", angles_df['local_solidity'])
@@ -149,18 +152,18 @@ dM_values = np.zeros(num_elements)
 
 # Calculate dr for all elements
 # make array of differential span values
-dr_values = np.diff(angles_df['span_position'].values, prepend=angles_df['span_position'].values[0]) # 
+dr_values = np.diff(angles_df['span_position'].values, prepend=angles_df['span_position'].values[0]) #
 
 # Calculate differential thrust and torque for all elements at once
-dT_values = fn.compute_dT(angles_df['span_position'].values, 
-                         dr_values, 
-                         RHO, 
-                         V_INFLOW, 
+dT_values = fn.compute_dT(angles_df['span_position'].values,
+                         dr_values,
+                         RHO,
+                         V_INFLOW,
                          angles_df['axial_induction'].values)
 
-dM_values = fn.compute_dM(angles_df['span_position'].values, 
-                         dr_values, 
-                         RHO, 
+dM_values = fn.compute_dM(angles_df['span_position'].values,
+                         dr_values,
+                         RHO,
                          V_INFLOW,
                          angles_df['axial_induction'].values,
                          angles_df['tangential_induction'].values,
@@ -203,5 +206,17 @@ print(' \n CT and CP computed')
 # %% Loop over all blade elements, integrate to get thrust (T) and torque (M), then compute power output.
 # %% Compute thrust coefficient CT and power coefficient CP.
 
+# print range of each column in angles_df
+print("\nRange of each column in angles_df:")
+for col in angles_df.columns:
+    print(f"{col}: {angles_df[col].min():.2f} to {angles_df[col].max():.2f}")
+
+# plot cl/cd vs alpha
+fn.plot_clcd_vs_alpha(angles_df)
+
+#plot cd vs cl
+fn.plot_cd_cl(angles_df)
+
 
 print(' \n finished main.py')
+
