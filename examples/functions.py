@@ -1,4 +1,4 @@
-"""functions for the final project"""
+"""functions for the final pro ect"""
 import os
 from pathlib import Path
 import matplotlib.pyplot as plt

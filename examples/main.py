@@ -71,6 +71,9 @@ tangential_induction = 0.0  # tangential induction factor (assumed constant for 
 flow_angles = fn.compute_flow_angle(blade_data_df, 'BlSpn', axial_induction,
                                     tangential_induction, V_INFLOW, ROTATIONAL_SPEED)
 print(' \n flow angles computed')
+
+print(flow_angles*180/pi)
+
 # %% Step 3: Compute the local angle of attack α.
 local_angle_of_attack, local_angle_of_attack_deg  = fn.compute_local_angle_of_attack(flow_angles, PITCH_ANGLE_RAD, blade_data_df, 'BlTwist')
 
@@ -116,8 +119,8 @@ angles_df['Cn'] = fn.compute_normal_coeff(angles_df['Cl'], angles_df['Cd'], angl
 angles_df['Ct'] = fn.compute_tangential_coeff(angles_df['Cl'], angles_df['Cd'], angles_df['flow_angle_rad']) #50 values 
 
 print('n \Cn and Ct Computed')
-# print(angles_df['Cn'])
-# print(angles_df['Ct']) 
+print(angles_df['Cn'])
+print(angles_df['Ct']) 
 
 
 # %% Step 6: Update a and a′.
@@ -126,10 +129,10 @@ angles_df['local_solidity'] = fn.compute_local_solidity(blade_data_df, 'BlChord'
 
 angles_df['axial_induction'] = fn.update_axial(angles_df, 'flow_angle_rad', 'local_solidity', 'Cn')
 
-# print(angles_df['axial_induction'])
+print(angles_df['axial_induction'])
 
 angles_df['tangential_induction'] = fn.update_tangential(angles_df, 'flow_angle_rad', 'local_solidity', 'Ct')
-# print(angles_df['tangential_induction'])
+print(angles_df['tangential_induction'])
 
 # print("Flow angle range:", angles_df['flow_angle_deg'])
 # print("Local Solidity Range (sigma):", angles_df['local_solidity'])
