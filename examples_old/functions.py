@@ -453,56 +453,6 @@ def compute_local_angle_of_attack(flow_angles, PITCH_ANGLE, blade_data_df, blade
         
     return alpha_rad, alpha_deg    
 # %% Coefficients functions
-def interpolate_Cl_Cd_coeff(angles_df, airfoil_polar):
-    """
-    Compute lift coefficients by interpolating airfoil polar data for each blade element.
-    
-    Parameters:
-    ----------
-    angles_df : pandas.DataFrame
-        DataFrame containing local angles of attack and span positions
-    airfoil_polar : dict
-        Dictionary of airfoil polar data, keys are airfoil identifiers
-        
-    Returns:
-    -------
-    numpy.ndarray
-        Array of lift coefficients for each blade element
-    """
-    # Get the local angles of attack
-    alpha_deg = angles_df['local_angle_of_attack_deg'].values
-    
-    # Available airfoil IDs (sorted numerically)
-    airfoil_ids = sorted(list(airfoil_polar.keys()), key=lambda x: int(x))
-    
-    # Initialize array for lift coefficients
-    Cl = np.zeros_like(alpha_deg)
-    Cd = Cl.copy()  # Initialize drag coefficients as well
-    
-    # For each blade element, match with corresponding airfoil by index
-    for i in range(len(alpha_deg)):
-        # Simple direct mapping - use index to select airfoil
-        # Convert index to two-digit string (00, 01, 02, ..., 49)
-        airfoil_idx = str(i).zfill(2)
-        
-        # If this exact airfoil exists, use it, otherwise find closest
-        if airfoil_idx in airfoil_ids:
-            airfoil_id = airfoil_idx
-        else:
-            # This is a fallback if there's not exactly 50 airfoils
-            airfoil_id = airfoil_ids[min(i, len(airfoil_ids)-1)]
-        
-        # Get airfoil data
-        airfoil_data = airfoil_polar[airfoil_id]
-        
-        # Interpolate Cl using local angle of attack
-        Cl[i] = np.interp(alpha_deg[i], airfoil_data['Alpha'], airfoil_data['Cl'])
-        Cd[i] = np.interp(alpha_deg[i], airfoil_data['Alpha'], airfoil_data['Cd'])
-        
-
-    
-    return Cl, Cd
-
 def compute_normal_coeff(Cl, Cd, flow_angle):
     """
     Compute the normal force coefficient (Cn) based on Cl, flow angle, and Cd.
