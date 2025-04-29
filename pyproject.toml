@@ -27,6 +27,16 @@ dependencies = [
 [project.urls]
 Repository = "https://github.com/DTUWindEducation/codecamp-la-bombas.git"
 
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
 # Tell Hatch where to find your package files
 [tool.hatch.build.targets.wheel]
 packages = ["src/codecamp"]
+
+[tool.pytest.ini_options]
+addopts = "--cov=examples --cov-report=term-missing"
+testpaths = ["tests"]
