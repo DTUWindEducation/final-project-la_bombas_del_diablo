@@ -84,9 +84,6 @@ print(' \n flow angles (rad):')
 print(flow_angles_deg)
 print(' \n flow angles computed')
 
-print(flow_angles*180/pi)
-
-
 # Plot flow angles as function of blade span
 fn.plot_flow_angles(blade_data_df, flow_angles_deg, False)
 
@@ -133,10 +130,8 @@ airfoil_df = pd.DataFrame(chosen_airfoil)
 # print(f'Cl: {Cl}')
 # print(f'Cd: {Cd}')
 
-Cl, Cd = fn.interpolate_Cl_Cd_coeff(angles_df, airfoil_polar)
-
-angles_df['Cl'] = Cl
-angles_df['Cd'] = Cd
+angles_df['Cl'] = np.interp(local_angle_of_attack_deg, airfoil_df['Alpha'], airfoil_df['Cl'])
+angles_df['Cd'] = np.interp(local_angle_of_attack_deg, airfoil_df['Alpha'], airfoil_df['Cd'])
 
 print(' \n Cl and Cd computed')
 # plot Cl and Cd as function of local angle of attack
@@ -150,8 +145,6 @@ angles_df['Cn'] = fn.compute_normal_coeff(angles_df['Cl'], angles_df['Cd'], angl
 angles_df['Ct'] = fn.compute_tangential_coeff(angles_df['Cl'], angles_df['Cd'], angles_df['flow_angle_rad']) #50 values 
 
 print('n \Cn and Ct Computed')
-print(angles_df['Cn'])
-print(angles_df['Ct']) 
 fn.plot_val_vs_local_angle_of_attack(angles_df, 'Cn', show_plot=False)
 fn.plot_val_vs_local_angle_of_attack(angles_df, 'Ct', show_plot=False)
 # print(angles_df['Cn'] = angles_df['Cl'])
@@ -196,12 +189,10 @@ fn.plot_scatter(angles_df,'span_position','axial_induction', 'axial_induction',
 fn.plot_scatter(angles_df,'span_position','axial_induction_joe', 'axial_induction joe', 
                 'Span Position (m)', 'Axial Induction (a)', show_plot=False)
 
-# print(angles_df['axial_induction_joe'])
+print(angles_df['axial_induction_joe'])
 
-print(angles_df['axial_induction'])
+# print(angles_df['axial_induction'])
 
-angles_df['tangential_induction'] = fn.update_tangential(angles_df, 'flow_angle_rad', 'local_solidity', 'Ct')
-print(angles_df['tangential_induction'])
 angles_df['tangential_induction'] = fn.update_tangential(angles_df)
 angles_df['tangential_induction_joe'] = fn.update_tangential_joe(angles_df)
 
@@ -225,7 +216,6 @@ fn.plot_scatter(angles_df,'span_position','tangential_induction_joe', 'tangentia
 
 
 # %% Step 7: If a and a′ change beyond a set tolerance, return to Step 2; otherwise, continue.
-
 
 # %% Step 8: Compute the local contribution to thrust and torque.
 
