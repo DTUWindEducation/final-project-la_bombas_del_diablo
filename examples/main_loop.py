@@ -80,11 +80,14 @@ while True:
     # print('Iteration:', iteration_counter)
     
     #compute flow angle for all blade elements in radians
-    flow_angles, flow_angles_deg = fn.compute_flow_angle(angles_df, V_INFLOW, 
-                                                        ROTATIONAL_SPEED)
+    # flow_angles, flow_angles_deg = fn.compute_flow_angle(angles_df, V_INFLOW, 
+    #                                                     ROTATIONAL_SPEED)
 
-    angles_df['flow_angle_rad'] = flow_angles
-    angles_df['flow_angle_deg'] = flow_angles_deg
+    # angles_df['flow_angle_rad'] = flow_angles
+    # angles_df['flow_angle_deg'] = flow_angles_deg
+
+    angles_df['flow_angle_rad'], angles_df['flow_angle_deg']   = fn.compute_flow_angle(angles_df, V_INFLOW, 
+                                                        ROTATIONAL_SPEED)
 
     # print(' \n flow angles (rad):')
     # print(flow_angles_deg)
@@ -96,7 +99,7 @@ while True:
 
 
     # %% Step 3: Compute the local angle of attack α.
-    local_angle_of_attack, local_angle_of_attack_deg  = fn.compute_local_angle_of_attack(flow_angles, PITCH_ANGLE_RAD, blade_data_df, 'BlTwist')
+    local_angle_of_attack, local_angle_of_attack_deg  = fn.compute_local_angle_of_attack(angles_df['flow_angle_rad'], PITCH_ANGLE_RAD, blade_data_df, 'BlTwist')
     angles_df['local_angle_of_attack_rad'] = local_angle_of_attack
     angles_df['local_angle_of_attack_deg'] = local_angle_of_attack_deg
 
@@ -331,12 +334,12 @@ power_coeff = fn.compute_power_coeff(RHO, A, V_INFLOW, aero_power)
 
 print("\nResults:")
 
-print(f"\nTotal thrust: {total_thrust/1000:.2e} kN") # divide by 1000 to convert to kN
+print(f"\nTotal thrust: {total_thrust:.2e} kN") # divide by 1000 to convert to kN
 print(f'Reference thrust at chosen wind speed: {power_curve_df["aero_thrust"].iloc[POWER_CURVE_INDICE]/1000:.2e} kN')
 
-print(f"\nTotal torque: {total_torque/1000:.2e} kN·m") # divide by 1000 to convert to kN·m
+print(f"\nTotal torque: {total_torque:.2e} kN·m") # divide by 1000 to convert to kN·m
 
-print(f"\nAerodynamic power: {aero_power/1000:.2e} kW") # divide by 1000 to convert to kW
+print(f"\nAerodynamic power: {aero_power:.2e} kW") # divide by 1000 to convert to kW
 print(f'Reference power at chosen wind speed: {power_curve_df["aero_power"].iloc[POWER_CURVE_INDICE]:.2e} kW')
 
 print(f"\nThrust coefficient (CT): {thrust_coeff:.2f}")
@@ -356,7 +359,7 @@ print(f"Power coefficient (CP): {power_coeff:.2f}")
 # %% Loop over all blade elements, integrate to get thrust (T) and torque (M), then compute power output.
 # %% Compute thrust coefficient CT and power coefficient CP.
 print('Plotting results')
-fn.plot_flow_angles(blade_data_df, flow_angles_deg, False)
+fn.plot_flow_angles(blade_data_df, angles_df['flow_angle_deg'], False)
 fn.plot_local_angle_of_attack(angles_df, blade_data_df, False)
 fn.plot_val_vs_local_angle_of_attack(angles_df, 'Cl', show_plot=False)
 fn.plot_val_vs_local_angle_of_attack(angles_df, 'Cd', show_plot=False)

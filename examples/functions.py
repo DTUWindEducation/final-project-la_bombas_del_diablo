@@ -200,7 +200,7 @@ def read_airfoil_files(airfoils_dir, file_type='coordinates'):
         except Exception as e:
             print(f"Error reading {file_path.name}: {e}")
     
-    print(f"Successfully read {data_description} data. Amount of airfoil data: {len(airfoil_data)}")
+    # print(f"Successfully read {data_description} data. Amount of airfoil data: {len(airfoil_data)}")
     # if airfoil_data and "00" in airfoil_data:
     #     print(f'Head of {data_description} data \n {airfoil_data["00"].head()}')
     
@@ -402,11 +402,15 @@ def compute_flow_angle(angles_df, v_inflow, rotational_speed):
 
     # Calculate flow angle for each radius
     for i, r in enumerate(radius):
-        if r == 0:
-            phi[i] = (pi/2)  # 90 degrees at root
+        if r == 0 or omega == 0 or (1 + a_prime[i]) == 0:
+            phi[i] = (pi/2)  # 90 degrees at root or when denominator would be zero
         else:
-            # Use proper indexing for the induction factors
-            phi[i] = arctan(((1-a[i]) * V0) / ((1 + a_prime[i]) * omega * r))
+            # Ensure the denominator is not too close to zero
+            denominator = (1 + a_prime[i]) * omega * r
+            if abs(denominator) < 1e-10:  # Small threshold to avoid numerical issues
+                phi[i] = (pi/2)
+            else:
+                phi[i] = arctan(((1-a[i]) * V0) / denominator)
     
     phi_deg = np.degrees(phi)  # Convert to degrees
 
@@ -686,40 +690,82 @@ def update_tangential(df):
 
     return tangential
 
-def update_axial_joe(df):
-    dC_T = df['delta_thrust_coeff'].values  # dC_T
-    a = df['axial_induction'].values  # a_1
-    f = 0.1  # relaxation factor
-    # Compute a_1
-    a_updated = 0.246 * dC_T + 0.0586 * dC_T**2 + 0.0883*dC_T**3
-    a_updated = f * a_updated + (1 - f) * a
-
-    return a_updated
-
-def update_tangential_joe(df):
-    sigma = df['local_solidity'].values  # local solidity
-    phi = df['flow_angle_rad'].values  # flow angle in radians
-    C_t = df['Ct'].values  # tangential force coefficient  
-    a = df['tangential_induction'].values 
-    F = df['prandtl_factor'].values  # Prandtl factor
-    f = 0.1  # relaxation factor
+def update_axial_joe(elements_df):
+    """Update axial induction factor with correction"""
+    dC_T = elements_df['delta_thrust_coeff'].values
+    F = elements_df['prandtl_factor'].values
     
-
-    # compute tangential induction factor
-    a_updated = ((sigma * C_t) * (1 + a)) / \
-        (4 * F * np.sin(phi) * np.cos(phi))
-    a_updated = f * a_updated + (1 - f) * a
-
+    # Clip dC_T to reasonable values to prevent overflow
+    dC_T = np.clip(dC_T, 0.0, 1.815)  # Clip to just below 1.816 to avoid sqrt of negative
+    
+    # Different formulas for different CT ranges
+    a_updated = np.zeros_like(dC_T)
+    
+    # Glauert correction for highly loaded elements
+    high_load_idx = dC_T > 0.96
+    normal_idx = ~high_load_idx
+    
+    # Normal BEM for most elements
+    a_updated[normal_idx] = 0.246 * dC_T[normal_idx] + 0.0586 * dC_T[normal_idx]**2 + 0.0883 * dC_T[normal_idx]**3
+    
+    # Glauert correction for high load - ensure we don't take sqrt of negative
+    sqrt_term = np.maximum(0, 1.816 - dC_T[high_load_idx])
+    a_updated[high_load_idx] = 1 - 0.5 * np.sqrt(sqrt_term)
+    
+    # Apply Prandtl factor
+    a_updated = a_updated * F
+    
+    # Clip to physical range
+    a_updated = np.clip(a_updated, 0.0, 0.95)
+    
+    # Handle any NaN values
+    a_updated = np.nan_to_num(a_updated, nan=0.0)
+    
     return a_updated
 
-def prandtl_correction(df, B, R):
-    r = df['span_position'].values
-    phi = df['flow_angle_rad'].values
+def update_tangential_joe(elements_df):
+    """Update tangential induction factor with correction"""
+    sigma = elements_df['local_solidity'].values
+    C_t = elements_df['Ct'].values
+    phi = elements_df['flow_angle_rad'].values
+    a = elements_df['axial_induction'].values
+    F = elements_df['prandtl_factor'].values
+    
+    # Add safety for small sin values
+    sin_phi_safe = np.clip(np.abs(np.sin(phi)), 1e-6, None)
+    cos_phi_safe = np.clip(np.abs(np.cos(phi)), 1e-6, None)
+    
+    # Safe calculation
+    a_prime_updated = np.zeros_like(a)
+    denominator = 4 * F * sin_phi_safe * cos_phi_safe
+    
+    # Only update where denominator is significant
+    valid_idx = denominator > 1e-6
+    a_prime_updated[valid_idx] = ((sigma[valid_idx] * C_t[valid_idx]) * (1 + a[valid_idx])) / denominator[valid_idx]
+    
+    # Clip to physical range
+    a_prime_updated = np.clip(a_prime_updated, -0.5, 0.5)
+    
+    # Handle any NaN values
+    a_prime_updated = np.nan_to_num(a_prime_updated, nan=0.0)
+    
+    return a_prime_updated
 
-    intermediate_term = (B / 2) * (R - r) / (r * np.abs(np.sin(phi)))
-    prandtl_factor = (2 / np.pi) * np.arccos(np.exp(-intermediate_term))
-
-    return prandtl_factor
+def prandtl_correction(angles_df, B, R):
+    """Calculate Prandtl's tip loss factor"""
+    r = angles_df['span_position'].values
+    phi = angles_df['flow_angle_rad'].values
+    
+    # Add safety values to prevent division by zero
+    r_safe = np.clip(r, 1e-6, None)  # Minimum value of 1e-6
+    sin_phi_safe = np.clip(np.abs(np.sin(phi)), 1e-6, None)
+    
+    intermediate_term = (B / 2) * (R - r_safe) / (r_safe * sin_phi_safe)
+    F = (2 / pi) * np.arccos(np.clip(np.exp(-intermediate_term), 0, 1))
+    
+    # Handle any remaining NaN values
+    F = np.nan_to_num(F, nan=0.1)
+    return F
 
 def update_delta_thrust_coeff(df):
     sigma = df['local_solidity'].values
@@ -763,10 +809,11 @@ def compute_dT(r, dr, rho, V_inflow, axial_factor):
     float
         Differential thrust
     """
-    dT = 4 * pi * r * rho * V_inflow**2 * axial_factor * (1 - axial_factor) * dr
+    dT = pi * r * rho * V_inflow**2 * axial_factor * (1 - axial_factor) * dr # [N]
+
     return dT
 
-def compute_dM(r, dr, rho, V_inflow, axial_factor, tangential_factor, omega):
+def compute_dM(r, dr, rho, V_inflow, axial_factor, tangential_factor, rotational_speed):
     """
     Compute differential torque at a blade element.
     
@@ -792,7 +839,8 @@ def compute_dM(r, dr, rho, V_inflow, axial_factor, tangential_factor, omega):
     float
         Differential torque
     """
-    dM = 4 * pi * r**3 * rho * V_inflow * omega * tangential_factor * (1 - axial_factor) * dr
+    
+    dM = pi * r**3 * rho * V_inflow * rotational_speed * tangential_factor * (1 - axial_factor) * dr # [N*m]
 
     return dM
 
@@ -804,7 +852,7 @@ def compute_aerodynamic_power(torque, rotational_speed):
     Parameters:
     ----------
     torque : float
-        Torque in Nm
+        Torque in kNm
     rotational_speed : float
         Rotational speed in rad/s
 
@@ -814,9 +862,10 @@ def compute_aerodynamic_power(torque, rotational_speed):
         Aerodynamic power in Watts
 
     """
-    P_aero = torque * rotational_speed  # aerodynamic power
+    
+    P_aero = torque * rotational_speed  #kNm/s = kW
 
-    return P_aero
+    return P_aero # [kW]
 
 # %% Plot functions
 
@@ -1022,10 +1071,31 @@ def plot_scatter(df,x,y, parameter, xlabel, ylabel, show_plot=False):
         plt.show()
     plt.close()
 
+def plot_results_vs_ws(df_results, y1, label1,
+                  y2, label2,
+                    ylabel):
+    plt.figure(figsize=(10, 6))
+    plt.plot(df_results['wind_speed'], df_results[y1], label=label1, color='blue')
+    plt.plot(df_results['wind_speed'], df_results[y2], label=label2, color='orange')
+    plt.xlabel('Wind Speed (m/s)')
+    plt.ylabel(ylabel)
+    plt.title(f'{label1} vs {label2}')
+    plt.legend()
+    plt.grid()
+    #save the figure
+    # Define path to save figures
+    main_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    pictures_dir = os.path.join(main_dir, 'final-project-la_bombas_del_diablo', 'outputs', 'pictures')
+    os.makedirs(pictures_dir, exist_ok=True)  # Ensure the directory exists
 
+    save_path = os.path.join(pictures_dir, f'{label1}_and_{label2}_vs_wind_speed.png')
+    plt.savefig(save_path)
+    print(f'Saved {label1} vs {label2} plot to {save_path}')
+    plt.close()       
 
 # %% Step 1
 def flow_angle_loop(span_positions, V0, omega):
+
     """
     Calculate flow angles at each span position for a single wind speed.
 
@@ -1072,3 +1142,42 @@ def flow_angle_loop(span_positions, V0, omega):
     flow_angles_df.index.name = 'Span Position (m)'
     
     return flow_angles_df
+
+# %% Convergence Check
+
+def check_convergence(elements_df, tolerance, iteration_counter, convergence_reached):
+    """
+    Check if the induction factors have converged.
+    
+    Parameters:
+    -----------
+    angles_df : DataFrame
+        DataFrame containing induction factors
+    tolerance : float
+        Convergence tolerance
+    iteration_counter : int
+        Current iteration count
+    max_iterations : int
+        Maximum number of iterations
+        
+    Returns:
+    --------
+    tuple : (converged, updated_df, stop_iterations)
+        converged: Boolean indicating if convergence was reached
+        updated_df: DataFrame with updated induction factors if not converged
+        stop_iterations: Boolean indicating if iterations should stop
+    """
+    # Check if convergence has been reached
+    if (np.abs(elements_df['axial_induction_new'] - elements_df['axial_induction']) < tolerance).all() and \
+       (np.abs(elements_df['tangential_induction_new'] - elements_df['tangential_induction']) < tolerance).all():
+        print(f'Convergence reached at iteration: {iteration_counter}')
+        convergence_reached = True
+    else:
+        # Apply relaxation factor to update induction factors
+        relax = 0.25  # Relaxation factor (adjust as needed)
+        elements_df['axial_induction'] = (1-relax) * elements_df['axial_induction'] + relax * elements_df['axial_induction_new']
+        elements_df['tangential_induction'] = (1-relax) * elements_df['tangential_induction'] + relax * elements_df['tangential_induction_new']
+        
+        iteration_counter += 1
+    
+    return convergence_reached, elements_df, iteration_counter
