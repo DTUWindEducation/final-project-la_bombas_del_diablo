@@ -8,6 +8,7 @@ import pandas as pd
 import scipy as sp
 import re
 
+
 # %% Read airfoil data
 def read_airfoil_file(file_path):
     """
@@ -312,36 +313,31 @@ def read_blade_data_file(file_path):
         blade_length = df['BlSpn'].max()
         df['r/R'] = df['BlSpn'] / blade_length
     
+    df = df.rename(columns={'BlSpn': 'span_position', 'BlTwist': 'twist_angle', 'BlChord': 'chord_length'})
+
+    
     return df
 
 # %% Math / Physical functions
 
-def compute_local_solidity(blade_data_df, chord_length, span_position):
+def compute_local_solidity(elements_df):
     """
     Calculate local solidity based on span position (r).
     
     Parameters:
     ----------
-    df_angles : DataFrame
-        DataFrame containing span positions and related blade angles.
+    elements_df : DataFrame
+        DataFrame with chord lengths and span_positions at each span position
         
-    blade_data_df : DataFrame
-        DataFrame containing the chord lengths at each span position.
-        
-    chord_length : str
-        Column name in blade_data_df containing the chord lengths at each span position.
-        
-    span_position : str
-        Column name in df_angles containing the span positions (r) in meters.
-
     Returns:
     -------
     float
         Local solidity at span position r
     """
+
     B = 3 # number of blades
-    c = blade_data_df[chord_length].values  # chord length in meters
-    r = blade_data_df[span_position].values  # span position in meters
+    c = elements_df['chord_length'].values  # chord length in meters
+    r = elements_df['span_position'].values  # span position in meters
     # Fixed: use np.clip to avoid division by zero
     r = np.clip(r, 1e-6, None)  # Avoid division by zero
     sigma = (c * B) / (2 * pi * r)  # Local solidity formula
@@ -371,7 +367,7 @@ def tip_speed_ratio(rotational_speed, ROTOR_RADIUS, V_inflow):
     return TSR
 
 # %% compute angles
-def compute_flow_angle(angles_df, v_inflow, rotational_speed):
+def compute_flow_angle(elements_df, v_inflow, rotational_speed):
     """
     Calculate the flow angle at a given span position.
 
@@ -381,7 +377,7 @@ def compute_flow_angle(angles_df, v_inflow, rotational_speed):
         DataFrame containing span positions
     span_position : str
         Column name for span position in df
-    angles_df : pandas.DataFrame
+    elements_df : pandas.DataFrame
         DataFrame containing axial and tangential induction factors
     v_inflow : float
         Inflow velocity in m/s
@@ -393,11 +389,11 @@ def compute_flow_angle(angles_df, v_inflow, rotational_speed):
     numpy.ndarray
         Flow angles in radians for each span position
     """
-    a = angles_df['axial_induction'].values  # axial induction factor array
-    a_prime = angles_df['tangential_induction'].values  # tangential induction factor array
+    a = elements_df['axial_induction'].values  # axial induction factor array
+    a_prime = elements_df['tangential_induction'].values  # tangential induction factor array
     omega = rotational_speed  # rotational speed in rad/s
     V0 = v_inflow  # inflow velocity
-    radius = angles_df['span_position'].values  # span position in meters (np array)
+    radius = elements_df['span_position'].values  # span position in meters (np array)
     phi = np.zeros(len(radius))  # Initialize flow angle array
 
     # Calculate flow angle for each radius
@@ -416,23 +412,17 @@ def compute_flow_angle(angles_df, v_inflow, rotational_speed):
 
     return phi, phi_deg  # np array of flow angles in radians
 
-def compute_local_angle_of_attack(flow_angles, PITCH_ANGLE, blade_data_df, blade_twist):
+def compute_local_angle_of_attack(elements_df, pitch_angle):
     """
     Calculate the local angle of attack at each blade element.
 
     Parameters:
     ----------
-    flow_angles : ndarray
-        Array of flow angles in radians
-    
-    PITCH_ANGLE : float
-        Blade pitch angle in radians
-    
-    blade_data_df : DataFrame
+    elements_df : DataFrame
         DataFrame containing blade geometry data including twist angles
     
-    blade_twist : str
-        Column name in blade_data_df for the twist angle in degrees
+    pitch_angle : float
+        Blade pitch angle in radians
     
     Returns:
     -------
@@ -441,13 +431,13 @@ def compute_local_angle_of_attack(flow_angles, PITCH_ANGLE, blade_data_df, blade
         radians and degrees respectively
     """
     # Get the flow angles 
-    phi = flow_angles   # 50x1 array
+    phi = elements_df['flow_angles']   # 50x1 array
     
     # Convert pitch angle to radians
-    theta = PITCH_ANGLE  # pitch angle in radians
+    theta = pitch_angle  # pitch angle in radians
     
     # Get twist angle (beta) from blade data for each span position in radians
-    beta = blade_data_df[blade_twist].values * (pi/180)  # 50x1 array
+    beta = elements_df['blade_twist'].values * (pi/180)  # 50x1 array
     
     # Calculate local angle of attack
     # Output in radians
@@ -457,13 +447,13 @@ def compute_local_angle_of_attack(flow_angles, PITCH_ANGLE, blade_data_df, blade
         
     return alpha_rad, alpha_deg    
 # %% Coefficients functions
-def interpolate_Cl_Cd_coeff(angles_df, airfoil_polar):
+def interpolate_Cl_Cd_coeff(elements_df, airfoil_polar):
     """
     Compute lift coefficients by interpolating airfoil polar data for each blade element.
     
     Parameters:
     ----------
-    angles_df : pandas.DataFrame
+    elements_df : pandas.DataFrame
         DataFrame containing local angles of attack and span positions
     airfoil_polar : dict
         Dictionary of airfoil polar data, keys are airfoil identifiers
@@ -474,7 +464,7 @@ def interpolate_Cl_Cd_coeff(angles_df, airfoil_polar):
         Array of lift coefficients for each blade element
     """
     # Get the local angles of attack
-    alpha_deg = angles_df['local_angle_of_attack_deg'].values
+    alpha_deg = elements_df['local_angle_of_attack_deg'].values
     
     # Available airfoil IDs (sorted numerically)
     airfoil_ids = sorted(list(airfoil_polar.keys()), key=lambda x: int(x))
@@ -507,41 +497,35 @@ def interpolate_Cl_Cd_coeff(angles_df, airfoil_polar):
     
     return Cl, Cd
 
-def compute_normal_coeff(Cl, Cd, flow_angle):
+def compute_normal_coeff(elements_df):
     """
     Compute the normal force coefficient (Cn) based on Cl, flow angle, and Cd.
 
     Parameters:
     ----------
-    Cl : float
-        Lift coefficient
-    flow_angle : float
-        Flow angle in radians
-    Cd : float
-        Drag coefficient
-
+    elements_df : DataFrame
     Returns:
     -------
     float
         Normal force coefficient (Cn)
 
+
     """
+    Cl = elements_df['Cl'].values  # lift coefficient
+    Cd = elements_df['Cd'].values  # drag coefficient
+    flow_angle = elements_df['flow_angle_rad'].values  # flow angle in radians
+
     Cn = Cl * cos(flow_angle) + Cd * sin(flow_angle)  # normal force coefficient
 
     return Cn
 
-def compute_tangential_coeff(Cl, Cd, flow_angle):
+def compute_tangential_coeff(elements_df):
     """
     Compute the tangential force coefficient (Ct) based on Cl, flow angle, and Cd.
 
     Parameters:
     ----------
-    Cl : float
-        Lift coefficient
-    flow_angle : float
-        Flow angle in radians
-    Cd : float
-        Drag coefficient
+    elements_df : DataFrame
 
     Returns:
     -------
@@ -549,6 +533,10 @@ def compute_tangential_coeff(Cl, Cd, flow_angle):
         Tangential force coefficient (Ct)
 
     """
+    Cl = elements_df['Cl'].values  # lift coefficient
+    Cd = elements_df['Cd'].values  # drag coefficient
+    flow_angle = elements_df['flow_angle_rad'].values  # flow angle in radians
+
     Ct = Cl * sin(flow_angle) - Cd * cos(flow_angle)  # tangential force coefficient
 
     return Ct
@@ -751,10 +739,10 @@ def update_tangential_joe(elements_df):
     
     return a_prime_updated
 
-def prandtl_correction(angles_df, B, R):
+def prandtl_correction(elements_df, B, R):
     """Calculate Prandtl's tip loss factor"""
-    r = angles_df['span_position'].values
-    phi = angles_df['flow_angle_rad'].values
+    r = elements_df['span_position'].values
+    phi = elements_df['flow_angle_rad'].values
     
     # Add safety values to prevent division by zero
     r_safe = np.clip(r, 1e-6, None)  # Minimum value of 1e-6
@@ -974,11 +962,11 @@ def plot_airfoils_3d(airfoil_coords, blade_span, blade_twist, show_plot=False):
     plt.close()
 
 
-def plot_flow_angles(blade_data_df, flow_angles_deg, show_plot=False):
+def plot_flow_angles(elements_df, flow_angles_deg, show_plot=False):
 
     plt.figure(figsize=(10, 6))
     # Exclude root and tip elements (positions 0 and -1) for clearer visualization
-    plt.plot(blade_data_df['BlSpn'].iloc[1:-1], flow_angles_deg[1:-1], 'bo-', linewidth=2)
+    plt.plot(elements_df['span_position'].iloc[1:-1], flow_angles_deg[1:-1], 'bo-', linewidth=2)
     plt.xlabel('Blade Span Position (m)', fontsize=12)
     plt.ylabel('Flow Angle (degrees)', fontsize=12)
     plt.title('Flow Angle vs Blade Span Position', fontsize=14)
@@ -1000,10 +988,10 @@ def plot_flow_angles(blade_data_df, flow_angles_deg, show_plot=False):
     
 
 
-def plot_local_angle_of_attack(angles_df, blade_data_df, show_plot=False):
+def plot_local_angle_of_attack(elements_df, show_plot=False):
     plt.figure(figsize=(10, 6))
     # Exclude root and tip elements (positions 0 and -1) for clearer visualization
-    plt.plot(blade_data_df['BlSpn'].iloc[1:-1], angles_df['local_angle_of_attack_deg'].iloc[1:-1], 'bo-', linewidth=2)
+    plt.plot(elements_df['span_position'].iloc[1:-1], elements_df['local_angle_of_attack_deg'].iloc[1:-1], 'bo-', linewidth=2)
     plt.xlabel('Blade Span (m)', fontsize=12)
     plt.ylabel('Local Angle of Attack (degrees)', fontsize=12)
     plt.title('Local Angle of Attack vs Blade Span', fontsize=14)
@@ -1024,10 +1012,10 @@ def plot_local_angle_of_attack(angles_df, blade_data_df, show_plot=False):
     plt.close()
 
 
-def plot_val_vs_local_angle_of_attack(angles_df, parameter, show_plot=False):
+def plot_val_vs_local_angle_of_attack(elements_df, parameter, show_plot=False):
     plt.figure(figsize=(10, 6))
     # Exclude root and tip elements (positions 0 and -1) for clearer visualization
-    plt.plot(angles_df['local_angle_of_attack_deg'].iloc[1:-1], angles_df[parameter].iloc[1:-1], 'bo-', linewidth=2, label = parameter)
+    plt.plot(elements_df['local_angle_of_attack_deg'].iloc[1:-1], elements_df[parameter].iloc[1:-1], 'bo-', linewidth=2, label = parameter)
     plt.xlabel('Local Angle of Attack (degrees)', fontsize=12)
     plt.ylabel(parameter, fontsize=12)
     plt.title(f'{parameter} vs Local Angle of Attack', fontsize=14)
@@ -1131,17 +1119,17 @@ def flow_angle_loop(span_positions, V0, omega):
     flow_angles_deg = np.degrees(flow_angles)
     
     # Create a DataFrame with span positions as index and wind speed as column name
-    flow_angles_df = pd.DataFrame(
+    flow_elements_df = pd.DataFrame(
         data=flow_angles_deg,
         index=span_positions,
         columns=[V0]  # Use the wind speed as column name
     )
     
     # Rename the columns with more descriptive headers
-    flow_angles_df.columns.name = 'flow angles (deg)'
-    flow_angles_df.index.name = 'Span Position (m)'
+    flow_elements_df.columns.name = 'flow angles (deg)'
+    flow_elements_df.index.name = 'Span Position (m)'
     
-    return flow_angles_df
+    return flow_elements_df
 
 # %% Convergence Check
 
@@ -1151,7 +1139,7 @@ def check_convergence(elements_df, tolerance, iteration_counter, convergence_rea
     
     Parameters:
     -----------
-    angles_df : DataFrame
+    elements_df : DataFrame
         DataFrame containing induction factors
     tolerance : float
         Convergence tolerance
