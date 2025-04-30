@@ -1,3 +1,12 @@
+Team members:
+Theodor Gilhøj
+Malthe Simony
+Joseph Abbott
+
+Contributions:
+
+The code was done mainly together using screensharing with one main coder on one a single laptop while the others helped to avoid confilctes. Therefore the work was devided evenly amoungst members. If individual work was done then the following work flow was used.
+
 Workflow:
 
 1. pull
@@ -9,3 +18,5 @@ Workflow:
 7. write in chat: status so far
 8. optional: keep working on something else/new, and then the workflow reiterates.
 
+Confilict resolution:
+All technical disagreements were discussed during weekly meetings. If technical difficulties could not be resolved within the group, then TA assistance would be required.
