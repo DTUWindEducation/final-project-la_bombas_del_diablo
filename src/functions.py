@@ -444,7 +444,10 @@ def compute_normal_coeff(elements_df):
     Cd = elements_df['Cd'].values
     flow_angle = elements_df['flow_angle_rad'].values
     Cn = Cl * cos(flow_angle) + Cd * sin(flow_angle)
+
     return Cn
+
+
 def compute_tangential_coeff(elements_df):
     """
     Compute the tangential force coefficient (Ct) based on Cl, flow angle, and Cd.
@@ -463,6 +466,7 @@ def compute_tangential_coeff(elements_df):
     flow_angle = elements_df['flow_angle_rad'].values
 
     Ct = Cl * sin(flow_angle) - Cd * cos(flow_angle)
+
     return Ct
 
 
@@ -487,6 +491,7 @@ def compute_thrust_coeff(rho, A, V_inflow, thrust):
         Thrust coefficient (Ct)
     """
     Ct = thrust / (0.5 * rho * A * V_inflow**2)
+
     return Ct
 
 
@@ -511,6 +516,7 @@ def compute_power_coeff(rho, A, V_inflow, power):
         Power coefficient (Cp)
     """
     Cp = power / (0.5 * rho * A * V_inflow**3)
+
     return Cp
 
 
@@ -535,6 +541,7 @@ def compute_total_loads(thrust_one_blade, torque_one_blade, num_blades):
     """
     total_thrust = thrust_one_blade * num_blades
     total_torque = torque_one_blade * num_blades
+
     return total_thrust, total_torque
 
 
@@ -559,6 +566,7 @@ def update_axial(df):
     Cn = df['Cn'].values
 
     axial = 1 / (4 * (sin(phi) ** 2) / (sigma * Cn) + 1)
+
     return axial
 
 
@@ -580,9 +588,25 @@ def update_tangential(df):
     Ct = df['Ct'].values
 
     tangential = 1 / (4 * (sin(phi) * cos(phi)) / (sigma * Ct) - 1)
+
     return tangential
+
+
 def update_axial_joe(elements_df):
-    """Update axial induction factor with correction."""
+    """Update axial induction factor with correction.
+    
+    Parameters
+    ----------
+    elements_df : DataFrame
+        DataFrame containing blade element data including delta thrust coefficient
+    
+        
+    Returns
+    -------
+    numpy.ndarray
+        Array of updated axial induction factors for each blade element
+    
+    """
     dC_T = elements_df['delta_thrust_coeff'].values
     F = elements_df['prandtl_factor'].values
 
@@ -615,7 +639,21 @@ def update_axial_joe(elements_df):
 
 
 def update_tangential_joe(elements_df):
-    """Update tangential induction factor with correction."""
+    """Update tangential induction factor with correction.
+    
+    Parameters
+    ----------
+    elements_df : DataFrame
+        DataFrame containing blade element data including 
+        local solidity, Ct, and flow angle
+
+    
+    Returns
+    -------
+    numpy.ndarray
+        Array of updated tangential induction factors for each blade element
+
+    """
     sigma = elements_df['local_solidity'].values
     C_t = elements_df['Ct'].values
     phi = elements_df['flow_angle_rad'].values
@@ -651,6 +689,7 @@ def prandtl_correction(elements_df, B, R):
     F = (2 / pi) * np.arccos(np.clip(np.exp(-intermediate_term), 0, 1))
 
     F = np.nan_to_num(F, nan=0.1)
+    
     return F
 
 
