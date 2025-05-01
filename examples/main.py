@@ -5,13 +5,17 @@ wind turbine performance at different wind speeds. The BEM method divides the
 blade into elements and iteratively calculates the forces and flow conditions
 to predict power output and thrust.
 """
-
+import sys
 from pathlib import Path
+
+# Add project root to Python path
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
 import numpy as np
-# import pandas as pd
 import matplotlib.pyplot as plt
 from src import functions as fn  # Custom functions for BEM calculations
-from src.class_BemOptimization import BemOptimization  # BEM implementation class
+from src.BemOptimization import BemOptimization  # BEM implementation class
 
 #  Physical and turbine constants
 RHO = 1.225  # Air density in kg/m³
@@ -32,7 +36,12 @@ def main():
     
     # Load all required input data for the simulation
     # Navigate to project root directory
-    DATA_DIR = Path(__file__).resolve().parent.parent  
+    DATA_DIR = Path(__file__).resolve().parent.parent
+
+    # Create output directories
+    results_dir = DATA_DIR / 'outputs' / 'results'
+    results_dir.mkdir(parents=True, exist_ok=True)  
+
     # Get airfoil aerodynamic data 
     # (coordinates and polar performance curves)
     airfoil_coords, airfoil_polar = fn.read_all_airfoil_files(
@@ -122,11 +131,9 @@ def main():
                           'total_thrust_bem', 'BEM thrust curve', 
                           'Thrust [kN]')
     
-    # Save the results to a CSV file for further analysis
-    results_df.to_csv(DATA_DIR / 'outputs' / 'results' /
-                      'results.csv', index=False)
-    converged_results_df.to_csv(DATA_DIR / 'outputs' / 'results' /
-                                'converged_results_df.csv', index=False)
+    # Save the results to CSV files
+    results_df.to_csv(results_dir / 'results.csv', index=False)
+    converged_results_df.to_csv(results_dir / 'converged_results_df.csv', index=False)
 
 
 # This guard ensures the code only runs when executed directly (not imported)
