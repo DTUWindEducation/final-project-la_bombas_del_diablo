@@ -1,4 +1,8 @@
+# pylint: disable=C0103
+
 """functions for the final project"""
+
+
 import os
 import re
 from pathlib import Path
@@ -6,12 +10,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import scipy as sp
-from numpy import (
-    arccos, arcsin, arctan, cos, pi, sin,
-    sqrt, tan
-)
-
+from numpy import (arctan, cos, pi, sin)
 
 # %% Read airfoil data
 def read_airfoil_file(file_path):
@@ -639,15 +638,14 @@ def update_axial_joe(elements_df):
 
 
 def update_tangential_joe(elements_df):
-    """Update tangential induction factor with correction.
-    
+    """Update tangential induction factor with correction
+
     Parameters
     ----------
     elements_df : DataFrame
         DataFrame containing blade element data including 
         local solidity, Ct, and flow angle
-
-    
+ 
     Returns
     -------
     numpy.ndarray
@@ -929,7 +927,29 @@ def plot_flow_angles(elements_df, flow_angles_deg, show_plot=False):
     if show_plot:
         plt.show()
     plt.close()
+
 def plot_local_angle_of_attack(elements_df, show_plot=False):
+    """
+    Plot the local angle of attack along the blade span and save the figure.
+
+    This function creates a 2D line plot of the local angle of attack (in degrees)
+    versus blade span position. The plot is saved to the 'outputs/pictures' directory
+    of the project. Optionally, the plot can be shown interactively.
+
+    Parameters
+    ----------
+    elements_df : pandas.DataFrame
+        DataFrame containing at least the following columns:
+        - 'span_position': positions along the blade (m)
+        - 'local_angle_of_attack_deg': local angle of attack (degrees)
+
+    show_plot : bool, optional
+        If True, displays the plot interactively. Default is False.
+
+    Returns
+    -------
+    None
+    """
     plt.figure(figsize=(10, 6))
     plt.plot(
         elements_df['span_position'].iloc[1:-1],
@@ -960,6 +980,30 @@ def plot_local_angle_of_attack(elements_df, show_plot=False):
 
 
 def plot_val_vs_local_angle_of_attack(elements_df, parameter, show_plot=False):
+    """
+    Plot a specified parameter against the local angle of attack and save the figure.
+
+    This function creates a 2D line plot of a given blade element parameter (e.g., Cl, Cd, Cn)
+    versus the local angle of attack (in degrees). The plot is saved to the 
+    'outputs/pictures' directory of the project. Optionally, the plot can be shown interactively.
+
+    Parameters
+    ----------
+    elements_df : pandas.DataFrame
+        DataFrame containing at least:
+        - 'local_angle_of_attack_deg': local angle of attack in degrees
+        - The specified `parameter` column to plot against angle of attack.
+
+    parameter : str
+        The name of the column in `elements_df` to be plotted on the y-axis.
+
+    show_plot : bool, optional
+        If True, displays the plot interactively. Default is False.
+
+    Returns
+    -------
+    None
+    """
     plt.figure(figsize=(10, 6))
     plt.plot(
         elements_df['local_angle_of_attack_deg'].iloc[1:-1],
@@ -991,6 +1035,41 @@ def plot_val_vs_local_angle_of_attack(elements_df, parameter, show_plot=False):
 
 
 def plot_scatter(df, x, y, parameter, xlabel, ylabel, show_plot=False):
+    """
+    Plot a scatter-style line plot of a parameter versus another variable and save the figure.
+
+    This function generates a 2D line plot of the specified `y` values versus `x` values 
+    from the given DataFrame. The plot is labeled according to the `parameter`, `xlabel`, 
+    and `ylabel` arguments, and saved to the 'outputs/pictures' directory. Optionally, 
+    the plot can be shown interactively.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        DataFrame containing the data to be plotted.
+
+    x : str
+        Column name in `df` to use for the x-axis.
+
+    y : str
+        Column name in `df` to use for the y-axis.
+
+    parameter : str
+        Name of the parameter being plotted, used for legend and filename.
+
+    xlabel : str
+        Label for the x-axis.
+
+    ylabel : str
+        Label for the y-axis.
+
+    show_plot : bool, optional
+        If True, displays the plot interactively. Default is False.
+
+    Returns
+    -------
+    None
+    """
     plt.figure(figsize=(10, 6))
     plt.plot(
         df[x].iloc[1:-1],
@@ -1021,6 +1100,37 @@ def plot_scatter(df, x, y, parameter, xlabel, ylabel, show_plot=False):
 
 
 def plot_results_vs_ws(df_results, y1, label1, y2, label2, ylabel):
+    """
+    Plot two result series against wind speed and save the figure.
+
+    This function plots two specified columns from a results DataFrame as functions
+    of wind speed, with separate labels for each line. The resulting plot is saved
+    to the 'outputs/pictures' directory and shows how two parameters vary with wind speed.
+
+    Parameters
+    ----------
+    df_results : pandas.DataFrame
+        DataFrame containing a 'wind_speed' column and at least the `y1` and `y2` columns.
+
+    y1 : str
+        Name of the first column to plot on the y-axis.
+
+    label1 : str
+        Legend label for the first data series.
+
+    y2 : str
+        Name of the second column to plot on the y-axis.
+
+    label2 : str
+        Legend label for the second data series.
+
+    ylabel : str
+        Label for the y-axis.
+
+    Returns
+    -------
+    None
+    """
     plt.figure(figsize=(10, 6))
     plt.plot(df_results['wind_speed'], df_results[y1],
              label=label1, color='blue')
