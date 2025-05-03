@@ -29,16 +29,19 @@ The objective is to iteratively solve for optimal axial and tangential induction
 -new_env_for_BEM\Scripts\activate
 
 # Step 3: Install dependencies
+If you have earlier verions of python
+-pip install "package" 
 
--pip install "package" (replace "package" with each of the following)
-or pip3 install "package"
+If you have python3 use: 
+-pip3 install "package"
 
+(replace "package" with each of the following)
 numpy
 pandas
 matplotlib
 scipy
 
-e.g. pip install numpy
+e.g. "pip install numpy pandas matplotlib scipy"
 
 
 
@@ -61,13 +64,17 @@ Airfoil coordinate files
 Airfoil polar files
 Blade data file
 Power curve data
-]
+
 
 # Step 5: Run main.py
 
 Enter the following in the terminal
-
+depending on your version of python. if you have python 3 use the following 
 -python3 examples/main.py 
+
+if you dont have the updated version of python use 
+python examples/main.py
+]
 
 ## Architecture
 
@@ -111,6 +118,7 @@ project/
 
 # Code Architecture 
 
+![Code Diagram](./outputs/pictures/Codediagram.png)
 
 
 # Class description
@@ -135,15 +143,6 @@ calculate_thrust_and_power(...)
 -Results are stored in the instance for later use or plotting.
 
 
-Inputs (Airfoils, Blade, Power Curve)
-        ↓
- BEM_optimization (per wind speed)
-        ↓
- Optimize induction factors
-        ↓
-Compute Loads → Results → Plots
-
-
 ## Peer review
 
-[Plot verification (comparison of BEM vs reference power curve and thrust curve).]
+[]
