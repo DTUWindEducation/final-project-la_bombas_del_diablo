@@ -18,27 +18,27 @@ git clone https://github.com/github-username/final-project-la_bombas_del_diablo.
 
 cd <your-repo-folder>
 
-step 2: Install dependencies
+step 2: Navigate to the root of the cloned repository (For example use Anaconda prompt)
 
-pip install "package"
+Example of a path: (cd is the command to change directory)
 
-the packages contain
+cd C:\Users\User_example\folder_example\final-project-la_bombas_del_diablo
+
+Step 3: Install the package:
+
+pip install .
+
+the package contains the following dependicies which will be installed automatically (See setup.py file for details)
 
 numpy
 pandas
 matplotlib
 scipy
 
-step 3: run the main script 
 
-python src/main.py
+Step 4: Run the main script
 
-Note: Ensure that the inputs/IEA-15-240-RWT/ directory contains:
-Airfoil coordinate files
-Airfoil polar files
-Blade data file
-Power curve data
-]
+python .\examples\main.py
 
 ## Architecture
 
