@@ -31,6 +31,7 @@ The objective is to iteratively solve for optimal axial and tangential induction
 # Step 3: Install dependencies
 
 -pip install "package" (replace "package" with each of the following)
+or pip3 install "package"
 
 numpy
 pandas
@@ -43,9 +44,17 @@ e.g. pip install numpy
 
 # Step 4: Check Folder Structure
 
+Make sure the following files are in place (especially under inputs/IEA-15-240-RWT/):
+
+project-root/
+├── inputs/
+│   └── IEA-15-240-RWT/
+│       ├── Airfoils/
+│       ├── IEA_15MW_RWT_Onshore.opt
+│       └── IEA-15-240-RWT_AeroDyn15_blade.dat
 
 
-python src/main.py
+
 
 Note: Ensure that the inputs/IEA-15-240-RWT/ directory contains:
 Airfoil coordinate files
@@ -54,26 +63,45 @@ Blade data file
 Power curve data
 ]
 
+# Step 5: Run BemOptimization.py
+
+Enter the following in the terminal
+
+-python3 src/BemOptimization.py 
+
 ## Architecture
 
-[project/
-├── inputs/                 # Contains airfoil files, blade data, power curve
+project/
+├── inputs/                     # Input configuration and data files
 │   └── IEA-15-240-RWT/
-│       ├── Airfoils/
-│       ├── IEA_15MW_RWT_Onshore.opt
-│       └── IEA-15-240-RWT_AeroDyn15_blade.dat
-├── src/
-│   ├── main.py              # Main BEM optimization 
-|   ├── __init__.py          # Functions
-script
-│   ├── functions.py         # Helper functions for BEM calculations
+│       ├── Airfoils/          # Contains airfoil geometry and polar data (.txt, .dat)
+│       ├── IEA_15MW_RWT_Onshore.opt     # Operating conditions
+│       └── IEA-15-240-RWT_AeroDyn15_blade.dat  # Blade geometry data
 │
-├── outputs/                 # Contains generated plots and results
-│   └── pictures/
-├── tests/                   # Unit tests for core functions
-├── README.md                # This file
-└── Collaboration.md         # Dependencies list
-]
+├── outputs/                    # Automatically generated outputs from simulations
+│   └── pictures/              # Saved plots: thrust, torque, flow angles, etc.
+│       └── .gitkeep           # Keeps folder tracked in git
+│
+├── src/                        # Source code for BEM and plotting
+│   ├── __init__.py            # Declares src as a package
+│   ├── BemOptimization.py     # BEM Optimization class logic and core simulation
+│   ├── functions.py           # All computational helper functions and plotting
+│
+├── tests/                      # Unit and integration tests
+│   ├── __init__.py
+│   ├── conftest.py           # Pytest fixtures and test configs
+│   └── test_functions.py     # Test cases for function logic
+│
+├── .vscode/                    # Editor settings for VSCode
+├── .pytest_cache/             # Pytest cache data (ignored in version control)5
+├── examples/                  # (Optional) Example usage scripts
+├── Outdated_shit/            # Deprecated or unused code/data (review before deletion)
+│
+├── .gitignore                 # Files/folders to ignore in version control
+├── .coverage                  # Coverage report (from test runs)
+├── README.md                  # Project overview and instructions
+└── Collaboration.md           # (Optional) Dependency list or team guidelines
+
 
 
 Package Structure and Classes:

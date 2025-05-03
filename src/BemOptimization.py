@@ -5,7 +5,7 @@
 from pathlib import Path
 import numpy as np
 import pandas as pd
-from src import functions as fn
+import functions as fn
 
 
 class BemOptimization:
