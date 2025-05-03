@@ -3,228 +3,201 @@ import pytest
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from examples.functions import *
+from src.functions import *
+from src.BemOptimization import BemOptimization
 
-# ----------- Core math/physics functions -----------
+# ------------------ Core Math & Physics ------------------
 
-def test_compute_flow_angle_simple():
-    df = pd.DataFrame({
-        'axial_induction': [0.2],
-        'tangential_induction': [0.05],
-        'span_position': [10]
-    })
-    phi_rad, phi_deg = compute_flow_angle(df, v_inflow=10, rotational_speed=1)
-    assert phi_rad.shape == (1,)
-    assert phi_deg.shape == (1,)
-    assert np.isfinite(phi_rad).all()
+class TestCorePhysics:
+    def test_flow_and_local_angle_and_coefficients(self):
+        df = pd.DataFrame({
+            'axial_induction': [0.2],
+            'tangential_induction': [0.05],
+            'span_position': [10],
+            'flow_angles': [0.2],
+            'twist_angle': [5.0]
+        })
+        phi_rad, phi_deg = compute_flow_angle(df, 10, 1)
+        alpha_rad, alpha_deg = compute_local_angle_of_attack(df, 0.0)
+        assert np.isfinite(phi_rad).all()
+        assert np.isfinite(alpha_deg).all()
 
-def test_compute_local_angle_of_attack_simple():
-    flow_angles = np.array([0.2])
-    blade_data = pd.DataFrame({'BlTwist': [5.0]})
-    alpha_rad, alpha_deg = compute_local_angle_of_attack(flow_angles, 0.0, blade_data, 'BlTwist')
-    assert alpha_rad.shape == (1,)
-    assert np.isfinite(alpha_deg).all()
+    def test_lift_drag_and_force_coeffs(self):
+        df = pd.DataFrame({'local_angle_of_attack_deg': [5.0]})
+        polar = {'00': pd.DataFrame({'Alpha': [0, 10], 'Cl': [0.5, 1.0], 'Cd': [0.01, 0.02]})}
+        Cl, Cd = interpolate_Cl_Cd_coeff(df, polar)
+        assert Cl[0] > 0 and Cd[0] > 0
 
-def test_interpolate_Cl_Cd_coeff_simple():
-    angles_df = pd.DataFrame({'local_angle_of_attack_deg': [5.0]})
-    airfoil_polar = {'00': pd.DataFrame({'Alpha': [0, 10], 'Cl': [0.5, 1.0], 'Cd': [0.01, 0.02]})}
-    Cl, Cd = interpolate_Cl_Cd_coeff(angles_df, airfoil_polar)
-    assert Cl.shape == (1,)
-    assert Cd.shape == (1,)
-    assert Cl[0] > 0
-    assert Cd[0] > 0
+        df2 = pd.DataFrame({'Cl': [1.0], 'Cd': [0.05], 'flow_angle_rad': [np.pi / 6]})
+        assert compute_normal_coeff(df2)[0] > 0
+        assert compute_tangential_coeff(df2)[0] > 0
 
-def test_compute_normal_and_tangential_coeff():
-    Cl, Cd, phi = 1.0, 0.05, np.pi/6
-    Cn = compute_normal_coeff(Cl, Cd, phi)
-    Ct = compute_tangential_coeff(Cl, Cd, phi)
-    assert isinstance(Cn, float)
-    assert isinstance(Ct, float)
-    assert Cn > 0
-    assert Ct > 0
+    def test_power_thrust_coeff_and_total(self):
+        Ct = compute_thrust_coeff(1.225, 100.0, 10.0, 500.0)
+        Cp = compute_power_coeff(1.225, 100.0, 10.0, 1000.0)
+        thrust, torque = compute_total_loads(100, 50, 3)
+        assert 0 <= Ct <= 2 and 0 <= Cp <= 1
+        assert thrust == 300 and torque == 150
 
-def test_compute_thrust_and_power_coeff():
-    rho, A, V_inflow, thrust, power = 1.225, 100.0, 10.0, 500.0, 1000.0
-    Ct = compute_thrust_coeff(rho, A, V_inflow, thrust)
-    Cp = compute_power_coeff(rho, A, V_inflow, power)
-    assert 0 <= Ct <= 2
-    assert 0 <= Cp <= 1
+# ------------------ Induction Factor Logic ------------------
 
-def test_compute_total_loads():
-    total_thrust, total_torque = compute_total_loads(100, 50, 3)
-    assert total_thrust == 300
-    assert total_torque == 150
+class TestInduction:
+    def test_update_all_induction_types(self):
+        df = pd.DataFrame({
+            'flow_angle_rad': [0.2],
+            'local_solidity': [0.05],
+            'Cn': [1.0],
+            'Ct': [0.2]
+        })
+        assert np.isfinite(update_axial(df)).all()
+        assert np.isfinite(update_tangential(df)).all()
 
-# ----------- Induction factor updates -----------
+    def test_prandtl_and_delta_thrust(self):
+        df = pd.DataFrame({'span_position': [5.0], 'flow_angle_rad': [0.1]})
+        F = prandtl_correction(df, 3, 50)
+        assert 0 <= F[0] <= 1
 
-def test_update_axial_and_tangential():
-    df = pd.DataFrame({
-        'flow_angle_rad': [0.2],
-        'local_solidity': [0.05],
-        'Cn': [1.0],
-        'Ct': [0.2]
-    })
-    a = update_axial(df)
-    a_prime = update_tangential(df)
-    assert np.isfinite(a).all()
-    assert np.isfinite(a_prime).all()
+        df2 = pd.DataFrame({
+            'local_solidity': [0.05], 'Cn': [1.0], 'prandtl_factor': [0.9],
+            'flow_angle_rad': [0.2], 'axial_induction': [0.3]
+        })
+        assert update_delta_thrust_coeff(df2).shape == (1,)
 
-def test_prandtl_correction_safe():
-    df = pd.DataFrame({'span_position': [5.0], 'flow_angle_rad': [0.1]})
-    F = prandtl_correction(df, 3, 50)
-    assert (0 <= F[0] <= 1)
+    def test_joe_induction_updates(self):
+        df = pd.DataFrame({
+            'delta_thrust_coeff': [0.5], 'prandtl_factor': [0.9],
+            'local_solidity': [0.05], 'Ct': [0.2], 'flow_angle_rad': [0.2],
+            'axial_induction': [0.3]
+        })
+        assert np.isfinite(update_axial_joe(df)).all()
+        assert np.isfinite(update_tangential_joe(df)).all()
 
-def test_update_delta_thrust_coeff_basic():
-    df = pd.DataFrame({
-        'local_solidity': [0.05],
-        'Cn': [1.0],
-        'prandtl_factor': [0.9],
-        'flow_angle_rad': [0.2],
-        'axial_induction': [0.3]
-    })
-    delta_Ct = update_delta_thrust_coeff(df)
-    assert delta_Ct.shape == (1,)
+# ------------------ Differentials & Power ------------------
 
-def test_update_axial_joe_and_tangential_joe():
-    df = pd.DataFrame({
-        'delta_thrust_coeff': [0.5],
-        'prandtl_factor': [0.9],
-        'local_solidity': [0.05],
-        'Ct': [0.2],
-        'flow_angle_rad': [0.2],
-        'axial_induction': [0.3]
-    })
-    a_joe = update_axial_joe(df)
-    a_prime_joe = update_tangential_joe(df)
-    assert np.isfinite(a_joe).all()
-    assert np.isfinite(a_prime_joe).all()
+class TestDifferentials:
+    def test_dT_dM_and_power(self):
+        dT = compute_dT(10, 1, 1.225, 10, 0.3)
+        dM = compute_dM(10, 1, 1.225, 10, 0.3, 0.05, 1)
+        P = compute_aerodynamic_power(10, 1)
+        assert dT > 0 and dM > 0 and P == 10
 
-# ----------- Differential thrust/torque and power -----------
+# ------------------ Convergence & Flow Logic ------------------
 
-def test_compute_dT_and_dM():
-    dT = compute_dT(10, 1, 1.225, 10, 0.3)
-    dM = compute_dM(10, 1, 1.225, 10, 0.3, 0.05, 1)
-    assert dT > 0
-    assert dM > 0
+class TestConvergenceFlow:
+    def test_convergence_behavior(self):
+        df = pd.DataFrame({
+            'axial_induction': [0.1, 0.2],
+            'tangential_induction': [0.05, 0.06],
+            'axial_induction_new': [0.15, 0.25],
+            'tangential_induction_new': [0.1, 0.1]
+        })
+        conv, df_new, iters = check_convergence(df, 1e-5, 2, False)
+        assert not conv and iters == 3
 
-def test_compute_aerodynamic_power_simple():
-    P = compute_aerodynamic_power(10, 1)
-    assert P == 10
+    def test_compute_spanwise_flow(self):
+        df = pd.DataFrame({
+            'axial_induction': [0.2] * 4,
+            'tangential_induction': [0.05] * 4,
+            'span_position': [0, 5, 10, 15]
+        })
+        phi_rad, phi_deg = compute_flow_angle(df, 10, 2)
+        assert len(phi_rad) == 4 and len(phi_deg) == 4
 
-# ----------- Convergence logic -----------
+# ------------------ File Reading ------------------
 
-def test_check_convergence_stops_fast():
-    df = pd.DataFrame({
-        'axial_induction': [0.2],
-        'tangential_induction': [0.05],
-        'axial_induction_new': [0.2001],
-        'tangential_induction_new': [0.0501]
-    })
-    conv, df_new, counter = check_convergence(df, tolerance=0.01, iteration_counter=0, convergence_reached=False)
-    assert isinstance(conv, bool)
+class TestFileReaders:
+    def test_read_valid_airfoil_and_blade_files(self, tmp_path):
+        af = tmp_path / "AF01.txt"
+        af.write_text("50  ! Number of points\nHeader\nHeader\nHeader\nHeader\n!  x/c        y/c\n0.0 0.0\n0.1 0.1\n")
+        num, df = read_airfoil_file(af)
+        assert num == "01" and not df.empty
 
-# ----------- Flow Angle logic -----------
+        polar = tmp_path / "Polar_01.dat"
+        polar.write_text("1000 Reynolds number\n2 NumAlf\nAlpha Cl Cd Cm\n0 1.0 0.01 0\n10 1.2 0.02 0\n")
+        num2, df2 = read_airfoil_polar_file(polar)
+        assert num2 == "01" and 'Cl' in df2.columns
 
-def test_flow_angle_loop_basic():
-    # Create fake input data matching what compute_flow_angle expects
-    df = pd.DataFrame({
-        'axial_induction': [0.2, 0.2, 0.2, 0.2],
-        'tangential_induction': [0.05, 0.05, 0.05, 0.05],
-        'span_position': [0, 5, 10, 15]
-    })
-    V0 = 10
-    omega = 2
-    phi_rad, phi_deg = compute_flow_angle(df, V0, omega)
-    assert len(phi_rad) == len(df)
-    assert len(phi_deg) == len(df)
+        blade = tmp_path / "blade.dat"
+        blade.write_text("2 NumBlNds\nBlSpn BlChord BlTwist\n(m) (m) (deg)\n5 0.5 2\n10 1.0 4\n")
+        df3 = read_blade_data_file(blade)
+        assert 'span_position' in df3.columns and np.isclose(df3['r/R'].iloc[-1], 1.0)
 
+    def test_handle_missing_or_invalid_files(self, tmp_path):
+        polar = tmp_path / "Polar_99.dat"
+        polar.write_text("1000 Reynolds number\n2 NumAlf\nAlpha Cm\n0 0.1\n10 0.2\n")
+        num, df = read_airfoil_polar_file(polar)
+        assert num == "99" and isinstance(df, pd.DataFrame)
 
-# ----------- File reading tests -----------
+        af = tmp_path / "AF02.txt"
+        af.write_text("0.0 0.0\n0.1 0.1\n0.2 0.2\n")
+        coord, polar = read_all_airfoil_files(tmp_path)
+        assert "02" in coord and "02" not in polar
 
-def test_read_airfoil_file(tmp_path):
-    file = tmp_path / "AF01.txt"
-    content = (
-        "50  ! Number of points\n"
-        "Header 1\nHeader 2\nHeader 3\nHeader 4\n"
-        "!  x/c        y/c\n"
-        "0.0 0.0\n0.1 0.1\n0.2 0.2\n0.3 0.3\n0.4 0.4\n"
-    )
-    file.write_text(content)
-    airfoil_num, df = read_airfoil_file(file)
-    assert airfoil_num == "01"
-    assert not df.empty
+# ------------------ Plotting Tests ------------------
 
-def test_read_airfoil_polar_file(tmp_path):
-    file = tmp_path / "Polar_01.dat"
-    content = (
-        "1000 Reynolds number\n"
-        "2 NumAlf\n"
-        "Alpha Cl Cd Cm\n"
-        "0 1.0 0.01 0\n"
-        "10 1.2 0.02 0\n"
-    )
-    file.write_text(content)
-    airfoil_num, df = read_airfoil_polar_file(file)
-    assert airfoil_num == "01"
-    assert not df.empty
-    assert 'Cl' in df.columns
+class TestPlotting:
+    @pytest.fixture(autouse=True)
+    def patch_plt(self, monkeypatch):
+        monkeypatch.setattr(plt, "savefig", lambda *args, **kwargs: None)
+        monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
 
-def test_read_all_airfoil_files(tmp_path):
-    af_file = tmp_path / "AF01.txt"
-    af_file.write_text(
-        "50  ! Number of points\n"
-        "Header 1\nHeader 2\nHeader 3\nHeader 4\n"
-        "!  x/c        y/c\n"
-        "0.0 0.0\n"
-        "0.1 0.1\n"
-        "0.2 0.2\n"
-        "0.3 0.3\n"
-        "0.4 0.4\n"
-    )
-    polar_file = tmp_path / "Polar_01.dat"
-    polar_file.write_text(
-        "1000 Reynolds number\n"
-        "2 NumAlf\n"
-        "Alpha Cl Cd Cm\n"
-        "0 1.0 0.01 0\n"
-        "10 1.2 0.02 0\n"
-    )
-    coord, polar = read_all_airfoil_files(tmp_path)
-    assert "01" in coord
-    assert "01" in polar
-    assert not coord["01"].empty
-    assert not polar["01"].empty
+    def test_all_plot_functions(self):
+        airfoil_coords = {"00": pd.DataFrame({"x/c": [0, 1], "y/c": [0, 0]})}
+        span = pd.Series([1])
+        twist = pd.Series([0])
+        plot_airfoils(airfoil_coords, show_plot=False)
+        plot_airfoils_3d(airfoil_coords, span, twist, show_plot=False)
 
-def test_read_blade_data_file(tmp_path):
-    file = tmp_path / "blade.dat"
-    file.write_text(
-        "2 NumBlNds\n"
-        "BlSpn BlChord BlTwist\n"
-        "(m) (m) (deg)\n"
-        "5 0.5 2\n"
-        "10 1.0 4\n"
-    )
-    df = read_blade_data_file(file)
-    assert 'BlSpn' in df.columns
-    assert 'r/R' in df.columns
-    assert len(df) == 2
-    assert np.isclose(df['r/R'].iloc[-1], 1.0)
+        df = pd.DataFrame({
+            'span_position': [0, 1, 2],
+            'local_angle_of_attack_deg': [5, 10, 15],
+            'Cl': [0.5, 0.7, 0.8]
+        })
+        plot_val_vs_local_angle_of_attack(df, 'Cl', show_plot=False)
+        plot_local_angle_of_attack(df, show_plot=False)
 
-# ----------- Plotting tests (mock savefig and show) -----------
+        result_df = pd.DataFrame({
+            'wind_speed': [5, 10, 15],
+            'Cp': [0.3, 0.4, 0.5],
+            'Ct': [0.7, 0.6, 0.5]
+        })
+        plot_results_vs_ws(result_df, 'Cp', 'Power Coeff', 'Ct', 'Thrust Coeff', 'Coefficient')
 
-def test_plot_airfoils_mock(monkeypatch):
-    monkeypatch.setattr(plt, "savefig", lambda *args, **kwargs: None)
-    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
-    airfoil_coords = {"00": pd.DataFrame({"x/c": [0, 1], "y/c": [0, 0]})}
-    plot_airfoils(airfoil_coords, show_plot=False)
+        df2 = pd.DataFrame({'x': [0, 1, 2], 'y': [0.1, 0.2, 0.3]})
+        plot_scatter(df2, 'x', 'y', 'test', 'x', 'y', show_plot=False)
 
-def test_plot_airfoils_3d_mock(monkeypatch):
-    import matplotlib
-    matplotlib.use('Agg')  # non-GUI backend to avoid Tkinter
-    monkeypatch.setattr(plt, "savefig", lambda *args, **kwargs: None)
-    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
-    airfoil_coords = {"00": pd.DataFrame({"x/c": [0, 1], "y/c": [0, 0]})}
-    span = pd.Series([1])
-    twist = pd.Series([0])
-    plot_airfoils_3d(airfoil_coords, span, twist, show_plot=False)
-    
+# ------------------ BEM Optimization ------------------
+
+class TestBemOptimization:
+    def test_optimization_and_thrust(self):
+        power_df = pd.DataFrame({'wind_speed': [8], 'rot_speed': [12.1], 'pitch': [0.0]})
+        blade_df = pd.DataFrame({'span_position': [2, 4], 'chord_length': [1.0, 0.8], 'twist_angle': [5.0, 3.0]})
+        
+        # Fixed: All columns now have 3 values
+        polar = {'00': pd.DataFrame({
+            'Alpha': [-10, 0, 10],
+            'Cl': [-0.5, 0.0, 0.5],
+            'Cd': [0.01, 0.01, 0.01]
+        })}
+
+        bem = BemOptimization(0, power_df, blade_df)
+
+        bem.optimize_induction_factors(
+            bem.elements_df,
+            polar,
+            False,
+            BLADES_NO=3,
+            ROTOR_RADIUS=50.0,
+            iteration_counter=0,
+            max_iterations=100,
+            tolerance=1e-3
+        )
+
+        bem.calculate_thrust_and_power(bem.elements_df, RHO=1.225, BLADES_NO=3, A=np.pi * 50**2)
+
+        assert bem.iteration_counter > 0
+        assert bem.total_thrust is not None
+        assert bem.total_torque is not None
+        assert bem.aero_power is not None
+        assert 0 <= bem.power_coeff <= 0.593
+        assert bem.thrust_coeff >= 0

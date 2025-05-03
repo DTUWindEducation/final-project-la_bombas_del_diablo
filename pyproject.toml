@@ -38,5 +38,5 @@ test = [
 packages = ["src/codecamp"]
 
 [tool.pytest.ini_options]
-addopts = "--cov=examples --cov-report=term-missing"
+addopts = "--cov=src --cov-report=term-missing"
 testpaths = ["tests"]
