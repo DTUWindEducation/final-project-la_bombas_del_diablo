@@ -42,30 +42,58 @@ python .\examples\main.py
 
 ## Architecture
 
-[project/
-├── inputs/                 # Contains airfoil files, blade data, power curve
-│   └── IEA-15-240-RWT/
-│       ├── Airfoils/
-│       ├── IEA_15MW_RWT_Onshore.opt
-│       └── IEA-15-240-RWT_AeroDyn15_blade.dat
-├── src/
-│   ├── main.py              # Main BEM optimization 
-|   ├── __init__.py          # Functions
-script
-│   ├── functions.py         # Helper functions for BEM calculations
+C:.
+│   Aerodynamics of Wind Turbines_24_09_05_13_53_36.pdf
+│   Collaboration.md
+│   LICENSE
+│   pyproject.toml
+│   README.md
+│   setup.py
+│   __init__.py
 │
-├── outputs/                 # Contains generated plots and results
-│   └── pictures/
-├── tests/                   # Unit tests for core functions
-├── README.md                # This file
-└── Collaboration.md         # Dependencies list
-]
-
+├───examples
+│   │   main.py
+│   │   __init__.py
+│
+├───inputs
+│   │   
+│   │   rotor_diagram.jpeg
+│   │
+│   └───IEA-15-240-RWT
+│       │   IEA-15-240-RWT_AeroDyn15_blade.dat
+│       │   IEA_15MW_RWT_Onshore.opt
+│       │
+│       └───Airfoils
+│
+├───outputs
+│   │
+│   ├───pictures
+│   │       3D_Airfoil_Geometry.png
+│   │       Converged_and_non_converged_Power_vs_wind_speed.png
+│   │       Converged_and_non_converged_Thrust_vs_wind_speed.png
+│   │
+│   └───results
+│           converged_results_df.csv
+│           results.csv
+│
+├───src
+│   │
+│   ├───bombas_package
+│   │   │   BemOptimization.py
+│   │   │   __init__.py
+│   │   │
+│   │   ├───utils
+│   │   │   │   functions.py
+│   │   │   │   __init__.py
+│
+└───tests
+    │   .gitkeep
+    │   conftest.py
+    │   test_bem.py
 
 Package Structure and Classes:
-
-src/main.py
-Class: Bem_optimization
+Main Script: \examples\main
+Class: \src\bombas_package\Bem_optimization
 
 Handles the entire BEM optimization and results extraction process.
 
