@@ -361,7 +361,8 @@ def compute_flow_angle(elements_df, v_inflow, rotational_speed):
                 phi[i] = arctan(((1 - a[i]) * V0) / denominator)
 
     phi_deg = np.degrees(phi)
-    return phi, phi_deg
+    phi_rad = phi
+    return phi_rad, phi_deg
 
 
 def compute_local_angle_of_attack(elements_df, pitch_angle):
@@ -380,7 +381,7 @@ def compute_local_angle_of_attack(elements_df, pitch_angle):
     tuple
         Local angle of attack in radians and degrees
     """
-    phi = elements_df['flow_angles']
+    phi = elements_df['flow_angles_rad']
     theta = pitch_angle
     beta = elements_df['twist_angle'].values * (pi / 180)
     alpha_rad = phi - (theta + beta)
@@ -441,7 +442,7 @@ def compute_normal_coeff(elements_df):
     """
     Cl = elements_df['Cl'].values
     Cd = elements_df['Cd'].values
-    flow_angle = elements_df['flow_angle_rad'].values
+    flow_angle = elements_df['flow_angles_rad'].values
     Cn = Cl * cos(flow_angle) + Cd * sin(flow_angle)
 
     return Cn
@@ -462,9 +463,9 @@ def compute_tangential_coeff(elements_df):
     """
     Cl = elements_df['Cl'].values
     Cd = elements_df['Cd'].values
-    flow_angle = elements_df['flow_angle_rad'].values
+    flow_angles = elements_df['flow_angles_rad'].values
 
-    Ct = Cl * sin(flow_angle) - Cd * cos(flow_angle)
+    Ct = Cl * sin(flow_angles) - Cd * cos(flow_angles)
 
     return Ct
 
@@ -560,7 +561,7 @@ def update_axial(df):
     ndarray
         Array of updated axial induction factors for each span position.
     """
-    phi = df['flow_angle_rad'].values
+    phi = df['flow_angles_rad'].values
     sigma = df['local_solidity'].values
     Cn = df['Cn'].values
 
@@ -582,7 +583,7 @@ def update_tangential(df):
     float
         Updated tangential induction factor
     """
-    phi = df['flow_angle_rad'].values
+    phi = df['flow_angles_rad'].values
     sigma = df['local_solidity'].values
     Ct = df['Ct'].values
 
@@ -654,7 +655,7 @@ def update_tangential_joe(elements_df):
     """
     sigma = elements_df['local_solidity'].values
     C_t = elements_df['Ct'].values
-    phi = elements_df['flow_angle_rad'].values
+    phi = elements_df['flow_angles_rad'].values
     a = elements_df['axial_induction'].values
     F = elements_df['prandtl_factor'].values
 
@@ -678,7 +679,7 @@ def update_tangential_joe(elements_df):
 def prandtl_correction(elements_df, B, R):
     """Calculate Prandtl's tip loss factor."""
     r = elements_df['span_position'].values
-    phi = elements_df['flow_angle_rad'].values
+    phi = elements_df['flow_angles_rad'].values
 
     r_safe = np.clip(r, 1e-6, None)
     sin_phi_safe = np.clip(np.abs(np.sin(phi)), 1e-6, None)
@@ -696,7 +697,7 @@ def update_delta_thrust_coeff(df):
     sigma = df['local_solidity'].values
     C_n = df['Cn'].values
     F = df['prandtl_factor'].values
-    phi = df['flow_angle_rad'].values
+    phi = df['flow_angles_rad'].values
     a_1 = df['axial_induction'].values
 
     delta_thrust_coeff = ((1 - a_1) ** 2 * sigma * C_n) / (F * np.sin(phi) ** 2)
@@ -833,7 +834,7 @@ def plot_airfoils(airfoil_coords, show_plot=False):
     print(f"Saved {len(airfoil_coords)} airfoil plots to {pictures_dir}")
 
 
-def plot_airfoils_3d(airfoil_coords, blade_span, blade_twist, show_plot=False):
+def plot_airfoils_3d(airfoil_coords, blade_span, twist_angle, show_plot=False):
     """
     Plot airfoil coordinates in 3D, incorporating blade span and twist angle.
 
@@ -843,7 +844,7 @@ def plot_airfoils_3d(airfoil_coords, blade_span, blade_twist, show_plot=False):
         Dictionary of airfoil coordinates
     blade_span : array-like
         Blade span positions from root to tip
-    blade_twist : array-like
+    twist_angle : array-like
         Twist angles at corresponding blade span positions
     show_plot : bool
         Whether to display the plot interactively
@@ -861,7 +862,7 @@ def plot_airfoils_3d(airfoil_coords, blade_span, blade_twist, show_plot=False):
         y = airfoil_coords[airfoil_num]['y/c']
         z = np.full_like(x, blade_span.values[i])
 
-        twist_angle_rad = np.radians(blade_twist.values[i])
+        twist_angle_rad = np.radians(twist_angle.values[i])
         x_rot = x * np.cos(twist_angle_rad) - y * np.sin(twist_angle_rad)
         y_rot = x * np.sin(twist_angle_rad) + y * np.cos(twist_angle_rad)
 
@@ -887,7 +888,7 @@ def plot_airfoils_3d(airfoil_coords, blade_span, blade_twist, show_plot=False):
     plt.close()
 
 
-def plot_flow_angles(elements_df, flow_angles_deg, show_plot=False):
+def plot_flow_angles(elements_df, show_plot=False):
     """
     Plot flow angle vs blade span position.
 
@@ -900,9 +901,12 @@ def plot_flow_angles(elements_df, flow_angles_deg, show_plot=False):
     show_plot : bool
         Whether to display the plot interactively
     """
+    flow_angles_deg = elements_df['flow_angles_deg'].values
+    span_position = elements_df['span_position'].values
+    
     plt.figure(figsize=(10, 6))
     plt.plot(
-        elements_df['span_position'].iloc[1:-1],
+        span_position.iloc[1:-1],
         flow_angles_deg[1:-1],
         'bo-',
         linewidth=2
@@ -970,7 +974,7 @@ def plot_local_angle_of_attack(elements_df, show_plot=False):
     os.makedirs(pictures_dir, exist_ok=True)
 
     save_path = os.path.join(
-        pictures_dir, 'Local_Angle_of_Attack_Blade_Twist_Position.png')
+        pictures_dir, 'Local_Angle_of_Attack_twist_angle_Position.png')
     plt.savefig(save_path)
     print(f'Saved Local Angle of Attack vs Blade Twist plot to {save_path}')
 
@@ -1099,7 +1103,10 @@ def plot_scatter(df, x, y, parameter, xlabel, ylabel, show_plot=False):
     plt.close()
 
 
-def plot_results_vs_ws(df_results, y1, label1, y2, label2, ylabel):
+def plot_results_vs_ws(converged_results, results_not_converged,
+                       reference_data, reference_label, converged_data,
+                       converged_label, non_converged_data, non_converged_label,
+                       ylabel, unit):
     """
     Plot two result series against wind speed and save the figure.
 
@@ -1132,13 +1139,19 @@ def plot_results_vs_ws(df_results, y1, label1, y2, label2, ylabel):
     None
     """
     plt.figure(figsize=(10, 6))
-    plt.plot(df_results['wind_speed'], df_results[y1],
-             label=label1, color='blue')
-    plt.plot(df_results['wind_speed'], df_results[y2],
-             label=label2, color='orange')
+    #Reference Data
+    plt.plot(results_not_converged['wind_speed'], results_not_converged[reference_data],
+             label=reference_label, color='blue')
+    # Not Converged Data
+    plt.plot(results_not_converged['wind_speed'], results_not_converged[non_converged_data],
+             label=non_converged_label, color='red')
+    # Converged Data
+    plt.plot(converged_results['wind_speed'], converged_results[converged_data],
+             label=converged_label, color='black')
+    
     plt.xlabel('Wind Speed (m/s)')
-    plt.ylabel(ylabel)
-    plt.title(f'{label1} vs {label2}')
+    plt.ylabel(f'{ylabel} ({unit})')
+    plt.title(f'Converged and Non-Converged {ylabel} vs Wind Speed')
     plt.legend()
     plt.grid()
 
@@ -1148,53 +1161,53 @@ def plot_results_vs_ws(df_results, y1, label1, y2, label2, ylabel):
     os.makedirs(pictures_dir, exist_ok=True)
 
     save_path = os.path.join(
-        pictures_dir, f'{label1}_and_{label2}_vs_wind_speed.png')
+        pictures_dir, f'Converged_and_non_converged_{ylabel}_vs_wind_speed.png')
     plt.savefig(save_path)
-    print(f'Saved {label1} vs {label2} plot to {save_path}')
+    print(f'Saved Converged and non converged {ylabel} data vs plot to {save_path}')
     plt.close()
 
 
 # %% Step 1
-def flow_angle_loop(span_positions, V0, omega):
-    """
-    Calculate flow angles at each span position for a single wind speed.
+# def flow_angle_loop(span_positions, V0, omega):
+#     """
+#     Calculate flow angles at each span position for a single wind speed.
 
-    Parameters
-    ----------
-    span_positions : array-like
-        Span positions along the blade (meters)
-    V0 : float
-        Wind speed (m/s)
-    omega : float
-        Rotational speed (rad/s)
+#     Parameters
+#     ----------
+#     span_positions : array-like
+#         Span positions along the blade (meters)
+#     V0 : float
+#         Wind speed (m/s)
+#     omega : float
+#         Rotational speed (rad/s)
 
-    Returns
-    -------
-    pandas.DataFrame
-        DataFrame containing flow angles in degrees for each span position
-    """
-    a = 0.0  # axial induction factor
-    a_prime = 0.0  # tangential induction factor
+#     Returns
+#     -------
+#     pandas.DataFrame
+#         DataFrame containing flow angles in degrees for each span position
+#     """
+#     a = 0.0  # axial induction factor
+#     a_prime = 0.0  # tangential induction factor
 
-    flow_angles = np.zeros(len(span_positions))
+#     flow_angles = np.zeros(len(span_positions))
 
-    for i, r in enumerate(span_positions):
-        if r > 0:
-            flow_angles[i] = compute_flow_angle(a, a_prime, V0, omega, r)
-        else:
-            flow_angles[i] = pi / 2
+#     for i, r in enumerate(span_positions):
+#         if r > 0:
+#             flow_angles[i] = compute_flow_angle(a, a_prime, V0, omega, r)
+#         else:
+#             flow_angles[i] = pi / 2
 
-    flow_angles_deg = np.degrees(flow_angles)
+#     flow_angles_deg = np.degrees(flow_angles)
 
-    flow_elements_df = pd.DataFrame(
-        data=flow_angles_deg,
-        index=span_positions,
-        columns=[V0]
-    )
-    flow_elements_df.columns.name = 'flow angles (deg)'
-    flow_elements_df.index.name = 'Span Position (m)'
+#     flow_elements_df = pd.DataFrame(
+#         data=flow_angles_deg,
+#         index=span_positions,
+#         columns=[V0]
+#     )
+#     flow_elements_df.columns.name = 'flow angles (deg)'
+#     flow_elements_df.index.name = 'Span Position (m)'
 
-    return flow_elements_df
+#     return flow_elements_df
 
 
 # %% Convergence Check

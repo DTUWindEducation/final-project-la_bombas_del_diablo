@@ -1,2 +1,1 @@
-from .functions import *
-from .BemOptimization import BemOptimization
+"""Package initialization for the BEM simulation."""
