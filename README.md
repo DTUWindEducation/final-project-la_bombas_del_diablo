@@ -102,58 +102,26 @@ project/
 ├── README.md                  # Project overview and instructions
 └── Collaboration.md           # (Optional) Dependency list or team guidelines
 
+# Class description
+The BemOptimization class implements the core logic for Blade Element Momentum (BEM) analysis of a wind turbine rotor. It simulates aerodynamic behavior at a specific operating point (a wind speed from a power curve) and computes performance metrics like aerodynamic power, torque, and thrust based on blade geometry and airfoil characteristics.
+
+initialize_elements_df(blade_data_df)
+--Initializes and returns a DataFrame for blade elements, setting initial induction factors and computing initial flow angles.
 
 
-Package Structure and Classes:
+optimize_induction_factors(...)
+-Performs iterative BEM calculations:
+-Updates flow angles, angle of attack, and aerodynamic coefficients (Cl, Cd, Cn, Ct).
+-Applies tip loss corrections and computes new induction factors.
+-Stops when convergence is reached or iteration limit is hit.
+-Updates self.elements_df.
 
-src/main.py
-Class: Bem_optimization
-
-Handles the entire BEM optimization and results extraction process.
-
-__init__(self, index): Initializes optimization for a wind speed entry.
-
-initialize_elements_df(self): Prepares blade elements and inductions.
-
-optimize_induction_factors(self, ...): Iteratively solves for optimal axial and tangential induction factors.
-
-calculate_thrust_and_power(self, elements_df): Computes total thrust, torque, and aerodynamic power for a given condition.
-
-
-src/functions.py
-Utility and helper functions, including:
-
-Data reading functions:
-
-read_airfoil_file(), read_airfoil_polar_file(), read_blade_data_file(), read_power_curve_file()
-
-Core BEM computations:
-
-compute_flow_angle(), compute_local_angle_of_attack(), interpolate_Cl_Cd_coeff(), etc.
-
-Aerodynamic calculations:
-
-compute_thrust_coeff(), compute_power_coeff(), compute_dT(), compute_dM()
-
-Convergence check and update rules:
-
-check_convergence(), update_axial_joe(), update_tangential_joe()
-
-Plotting utilities:
-
-plot_airfoils(), plot_airfoils_3d(), plot_results_vs_ws(), etc.
-
-
-Logical Flow Diagram:
-
-1. Load inputs: airfoil data, blade geometry, power curve
-2. For each wind speed:
-    - Initialize a BEM_optimization instance
-    - Optimize induction factors iteratively
-    - Compute thrust, torque, aerodynamic power
-    - Store results
-3. Plot results:
-    - Compare optimized BEM outputs with reference power and thrust curves
+calculate_thrust_and_power(...)
+-Given converged induction values:
+-Calculates differential thrust and torque along the blade.
+-Integrates to find total rotor thrust, torque, and aerodynamic power.
+-Computes nondimensional coefficients CT and CP
+-Results are stored in the instance for later use or plotting.
 
 
 Inputs (Airfoils, Blade, Power Curve)
