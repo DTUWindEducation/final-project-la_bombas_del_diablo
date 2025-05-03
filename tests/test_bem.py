@@ -3,8 +3,8 @@ import pytest
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from src.functions import *
-from src.BemOptimization import BemOptimization
+from src.bombas_package.utils.functions import *
+from src.bombas_package.BemOptimization import BemOptimization  # BEM implementation class
 
 # ------------------ Core Math & Physics ------------------
 
@@ -14,7 +14,7 @@ class TestCorePhysics:
             'axial_induction': [0.2],
             'tangential_induction': [0.05],
             'span_position': [10],
-            'flow_angles': [0.2],
+            'flow_angles_rad': [0.2],
             'twist_angle': [5.0]
         })
         phi_rad, phi_deg = compute_flow_angle(df, 10, 1)
@@ -28,7 +28,7 @@ class TestCorePhysics:
         Cl, Cd = interpolate_Cl_Cd_coeff(df, polar)
         assert Cl[0] > 0 and Cd[0] > 0
 
-        df2 = pd.DataFrame({'Cl': [1.0], 'Cd': [0.05], 'flow_angle_rad': [np.pi / 6]})
+        df2 = pd.DataFrame({'Cl': [1.0], 'Cd': [0.05], 'flow_angles_rad': [np.pi / 6]})
         assert compute_normal_coeff(df2)[0] > 0
         assert compute_tangential_coeff(df2)[0] > 0
 
@@ -44,7 +44,7 @@ class TestCorePhysics:
 class TestInduction:
     def test_update_all_induction_types(self):
         df = pd.DataFrame({
-            'flow_angle_rad': [0.2],
+            'flow_angles_rad': [0.2],
             'local_solidity': [0.05],
             'Cn': [1.0],
             'Ct': [0.2]
@@ -53,20 +53,20 @@ class TestInduction:
         assert np.isfinite(update_tangential(df)).all()
 
     def test_prandtl_and_delta_thrust(self):
-        df = pd.DataFrame({'span_position': [5.0], 'flow_angle_rad': [0.1]})
+        df = pd.DataFrame({'span_position': [5.0], 'flow_angles_rad': [0.1]})
         F = prandtl_correction(df, 3, 50)
         assert 0 <= F[0] <= 1
 
         df2 = pd.DataFrame({
             'local_solidity': [0.05], 'Cn': [1.0], 'prandtl_factor': [0.9],
-            'flow_angle_rad': [0.2], 'axial_induction': [0.3]
+            'flow_angles_rad': [0.2], 'axial_induction': [0.3]
         })
         assert update_delta_thrust_coeff(df2).shape == (1,)
 
     def test_joe_induction_updates(self):
         df = pd.DataFrame({
             'delta_thrust_coeff': [0.5], 'prandtl_factor': [0.9],
-            'local_solidity': [0.05], 'Ct': [0.2], 'flow_angle_rad': [0.2],
+            'local_solidity': [0.05], 'Ct': [0.2], 'flow_angles_rad': [0.2],
             'axial_induction': [0.3]
         })
         assert np.isfinite(update_axial_joe(df)).all()
@@ -161,7 +161,21 @@ class TestPlotting:
             'Cp': [0.3, 0.4, 0.5],
             'Ct': [0.7, 0.6, 0.5]
         })
-        plot_results_vs_ws(result_df, 'Cp', 'Power Coeff', 'Ct', 'Thrust Coeff', 'Coefficient')
+
+        non_converged_df = pd.DataFrame({'wind_speed': [], 'Cp': [], 'Ct': []})
+
+        plot_results_vs_ws(
+            result_df,
+            non_converged_df,
+            'Cp',
+            'Power Coeff',
+            'Ct',
+            'Thrust Coeff',
+            non_converged_df,
+            'Non-converged',
+            'Coefficient value',
+            '-'
+        )
 
         df2 = pd.DataFrame({'x': [0, 1, 2], 'y': [0.1, 0.2, 0.3]})
         plot_scatter(df2, 'x', 'y', 'test', 'x', 'y', show_plot=False)
@@ -173,7 +187,6 @@ class TestBemOptimization:
         power_df = pd.DataFrame({'wind_speed': [8], 'rot_speed': [12.1], 'pitch': [0.0]})
         blade_df = pd.DataFrame({'span_position': [2, 4], 'chord_length': [1.0, 0.8], 'twist_angle': [5.0, 3.0]})
         
-        # Fixed: All columns now have 3 values
         polar = {'00': pd.DataFrame({
             'Alpha': [-10, 0, 10],
             'Cl': [-0.5, 0.0, 0.5],
