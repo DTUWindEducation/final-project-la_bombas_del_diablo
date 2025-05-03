@@ -12,24 +12,38 @@ The objective is to iteratively solve for optimal axial and tangential induction
 
 ## Quick-start guide
 
-[step 1: Clone the repository
+# [step 1: Clone the repository
 
-git clone https://github.com/github-username/final-project-la_bombas_del_diablo.git
+-git clone https://github.com/github-username/final-project-la_bombas_del_diablo.git
+-cd <final-project-la_bombas_del_diablo>
 
-cd <your-repo-folder>
+# Step 2: Set up environment Named `new_env_for_BEM`
 
-step 2: Install dependencies
+# Mac/Linux:
+-```bash
+-python3 -m venv new_env_for_BEM
+-source new_env_for_BEM/bin/activate
+ 
+# Windows 
+-python -m venv new_env_for_BEM
+-new_env_for_BEM\Scripts\activate
 
-pip install "package"
+# Step 3: Install dependencies
 
-the packages contain
+-pip install "package" (replace "package" with each of the following)
 
 numpy
 pandas
 matplotlib
 scipy
 
-step 3: run the main script 
+e.g. pip install numpy
+
+
+
+# Step 4: Check Folder Structure
+
+
 
 python src/main.py
 
