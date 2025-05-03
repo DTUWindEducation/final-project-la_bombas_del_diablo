@@ -9,8 +9,8 @@ build-backend = "hatchling.build"
 
 # Information on the package
 [project]
-name = "codecamp_la_bombas"
-description = "codecamp project package by la bombas"
+name = "bombas_package"
+description = "Final project package for BEM by la bombas"
 version = "0.0.1"
 authors = [
     { name = "T.B. Gilhøj", email = "tgilhoj@gmail.com" }
@@ -25,7 +25,7 @@ dependencies = [
 ]
 
 [project.urls]
-Repository = "https://github.com/DTUWindEducation/codecamp-la-bombas.git"
+Repository = "https://github.com/DTUWindEducation/final-project-la_bombas_del_diablo.git"
 
 [project.optional-dependencies]
 test = [
