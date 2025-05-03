@@ -874,12 +874,15 @@ def plot_airfoils_3d(airfoil_coords, blade_span, twist_angle, show_plot=False):
     ax.set_title('3D Airfoil Geometry with Blade Span and Twist')
     ax.grid(True)
 
-    main_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    pictures_dir = os.path.join(
-        main_dir, 'final-project-la_bombas_del_diablo', 'outputs', 'pictures')
-    os.makedirs(pictures_dir, exist_ok=True)
+    current_file = Path(__file__).resolve()
+    # Navigate up to find the project root (3 levels up from functions.py)
+    project_root = current_file.parent.parent.parent.parent
+    
+    # Create outputs directory at the project root
+    pictures_dir = project_root / 'outputs' / 'pictures'
+    pictures_dir.mkdir(parents=True, exist_ok=True)
 
-    save_path = os.path.join(pictures_dir, '3D_Airfoil_Geometry.png')
+    save_path = pictures_dir / '3D_Airfoil_Geometry.png'
     plt.savefig(save_path)
     print(f'Saved 3D airfoil plot to {save_path}')
 
@@ -1155,13 +1158,15 @@ def plot_results_vs_ws(converged_results, results_not_converged,
     plt.legend()
     plt.grid()
 
-    main_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    pictures_dir = os.path.join(
-        main_dir, 'final-project-la_bombas_del_diablo', 'outputs', 'pictures')
-    os.makedirs(pictures_dir, exist_ok=True)
+    current_file = Path(__file__).resolve()
+    # Navigate up to find the project root (3 levels up from functions.py)
+    project_root = current_file.parent.parent.parent.parent
+    
+    # Create outputs directory at the project root
+    pictures_dir = project_root / 'outputs' / 'pictures'
+    pictures_dir.mkdir(parents=True, exist_ok=True)
 
-    save_path = os.path.join(
-        pictures_dir, f'Converged_and_non_converged_{ylabel}_vs_wind_speed.png')
+    save_path = pictures_dir / f'Converged_and_non_converged_{ylabel}_vs_wind_speed.png'
     plt.savefig(save_path)
     print(f'Saved Converged and non converged {ylabel} data vs plot to {save_path}')
     plt.close()
