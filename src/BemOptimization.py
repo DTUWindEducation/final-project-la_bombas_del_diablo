@@ -1,11 +1,9 @@
-# pylint: disable=C0103
-
 """Class for the final project"""
 
-from pathlib import Path
+# from pathlib import Path
 import numpy as np
-import pandas as pd
-from src import functions as fn
+# import pandas as pd
+import src.functions as fn
 
 
 class BemOptimization:
@@ -37,12 +35,12 @@ class BemOptimization:
         elements_df['axial_induction'] = np.zeros(len(elements_df))
         elements_df['tangential_induction'] = np.zeros(len(elements_df))
 
-        flow_angle_rad, _ = fn.compute_flow_angle(
-            elements_df,
-            self.wind_speed,
-            self.rotational_speed
-        )
-        elements_df['flow_angles'] = flow_angle_rad
+        # flow_angles_rad, _ = fn.compute_flow_angle(
+        #     elements_df,
+        #     self.wind_speed,
+        #     self.rotational_speed
+        # )
+        # elements_df['flow_angles'] = flow_angles_rad
 
         return elements_df
 
@@ -53,7 +51,8 @@ class BemOptimization:
         """
         Optimize induction factors using the BEM method.
 
-        This method iteratively updates the induction factors until convergence is reached.
+        This method iteratively updates the induction factors until 
+        convergence is reached.
 
         Parameters
         ----------
@@ -88,15 +87,16 @@ class BemOptimization:
         while not convergence_reached and iteration_counter < max_iterations:
 
             # Compute flow angles and put in the dataframe (df)
-            elements_df['flow_angle_rad'], elements_df['flow_angle_deg'] = (
+            elements_df['flow_angles_rad'], elements_df['flow_angles_deg'] = (
                 fn.compute_flow_angle(elements_df, self.wind_speed,
                                       self.rotational_speed))
 
             # Compute local angle of attack and put in the df
             (elements_df['local_angle_of_attack_rad'],
-             elements_df['local_angle_of_attack_deg']) = fn.compute_local_angle_of_attack(
+             elements_df['local_angle_of_attack_deg']) = (
+                 fn.compute_local_angle_of_attack(
                 elements_df, self.pitch_deg
-            )
+            ))
 
             # Interpolate lift and drag coefficients (And put in df)
             elements_df['Cl'], elements_df['Cd'] = fn.interpolate_Cl_Cd_coeff(
@@ -153,7 +153,7 @@ class BemOptimization:
         Parameters
         ----------
         elements_df : pd.DataFrame
-            DataFrame containing blade element data with converged 
+            DataFrame containing blade element data with converged
             induction factors.
         RHO : float
             Air density in kg/m³.
@@ -165,7 +165,7 @@ class BemOptimization:
         Returns
         -------
         None
-            Updates the instance attributes with calculated thrust, torque, 
+            Updates the instance attributes with calculated thrust, torque,
             aerodynamic power, thrust coefficient, and power coefficient
             directly in the object.
         """
@@ -176,8 +176,8 @@ class BemOptimization:
             prepend=elements_df['span_position'].values[0]
         )
 
-        # Calculate differential thrust (dT) for each blade element 
-        # using momentum theory and converged axial induction factors
+        # Calculate differential thrust (dT) for each blade element
+        # # using momentum theory and converged axial induction factors
         elements_df['dT'] = fn.compute_dT(
             elements_df['span_position'].values,
             dr_values,
@@ -198,7 +198,7 @@ class BemOptimization:
             self.rotational_speed
         )
 
-        # Sum up the differential thrust and torque contributions 
+        # Sum up the differential thrust and torque contributions
         # for one blade
         total_thrust_per_blade = elements_df['dT'].sum()    # [N]
         total_torque_per_blade = elements_df['dM'].sum()    # [Nm]

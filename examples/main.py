@@ -14,7 +14,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 import numpy as np
 import matplotlib.pyplot as plt
-from src import functions as fn  # Custom functions for BEM calculations
+import src.functions as fn  # Custom functions for BEM calculations
 from src.BemOptimization import BemOptimization  # BEM implementation class
 
 #  Physical and turbine constants
@@ -115,21 +115,25 @@ def main():
     converged_results_df = results_df[convergence_mask].copy()
     # Plot the results and compare with reference data
     # Power curve comparison
-    fn.plot_results_vs_ws(results_df, 'aero_power', 'Reference power curve', 
-                          'aero_power_bem', 'BEM power curve', 'Power [kW]')
+    fn.plot_results_vs_ws(converged_results_df, results_df, 'aero_power',
+                           'Reference power curve', 'aero_power_bem',
+                           'BEM power curve', 'aero_power_bem',
+                            'BEM (not converged)', 'Power', '[kW]')
+                          
     # Thrust curve comparison
-    fn.plot_results_vs_ws(results_df, 'aero_thrust', 'Reference thrust curve', 
-                          'total_thrust_bem', 'BEM thrust curve', 
-                          'Thrust [kN]')
+    fn.plot_results_vs_ws(converged_results_df, results_df, 'aero_thrust',
+                          'Reference thrust curve', 'total_thrust_bem',
+                          'BEM thrust curve', 'total_thrust_bem',
+                          'BEM (not converged)', 'Thrust', '[kN]')
     
-    fn.plot_results_vs_ws(converged_results_df, 'aero_power', 
-                          'Converged Reference power curve', 
-                          'aero_power_bem', 'BEM power curve', 'Power [kW]')
-    # Thrust curve comparison
-    fn.plot_results_vs_ws(converged_results_df, 'aero_thrust', 
-                          'Converged Reference thrust curve', 
-                          'total_thrust_bem', 'BEM thrust curve', 
-                          'Thrust [kN]')
+    # fn.plot_results_vs_ws(converged_results_df, 'aero_power', 
+    #                       'Converged Reference power curve', 
+    #                       'aero_power_bem', 'BEM power curve', 'Power [kW]')
+    # # Thrust curve comparison
+    # fn.plot_results_vs_ws(converged_results_df, 'aero_thrust', 
+    #                       'Converged Reference thrust curve', 
+    #                       'total_thrust_bem', 'BEM thrust curve', 
+    #                       'Thrust [kN]')
     
     # Save the results to CSV files
     results_df.to_csv(results_dir / 'results.csv', index=False)
