@@ -9,8 +9,8 @@ build-backend = "hatchling.build"
 
 # Information on the package
 [project]
-name = "codecamp_la_bombas"
-description = "codecamp project package by la bombas"
+name = "final_project_BEM_la_bombas"
+description = "Final project package for BEM by la bombas"
 version = "0.0.1"
 authors = [
     { name = "T.B. Gilhøj", email = "tgilhoj@gmail.com" }
