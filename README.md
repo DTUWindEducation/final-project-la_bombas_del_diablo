@@ -12,74 +12,77 @@ The objective is to iteratively solve for optimal axial and tangential induction
 
 ## Quick-start guide
 
-# [step 1: Clone the repository
+### [step 1: Clone the repository
 
--git clone https://github.com/github-username/final-project-la_bombas_del_diablo.git
--cd <final-project-la_bombas_del_diablo>
+* git clone https://github.com/github-username/final-project-la_bombas_del_diablo.git
+* cd <final-project-la_bombas_del_diablo>
 
-# Step 2: Set up environment Named `new_env_for_BEM`
+### Step 2: Set up environment Named `new_env_for_BEM`
 
-# Mac/Linux:
--```bash
--python3 -m venv new_env_for_BEM
--source new_env_for_BEM/bin/activate
+### Mac/Linux:
+* ```bash
+* python3 -m venv new_env_for_BEM
+* source new_env_for_BEM/bin/activate
  
-# Windows 
--python -m venv new_env_for_BEM
--new_env_for_BEM\Scripts\activate
+### Windows 
+* python -m venv new_env_for_BEM
+* new_env_for_BEM\Scripts\activate
 
-# Step 3: Install dependencies
+### Step 3: Install dependencies
 If you have earlier verions of python
--pip install "package" 
+* pip install "package" 
 
 If you have python3 use: 
--pip3 install "package"
+* pip3 install "package"
 
 (replace "package" with each of the following)
-numpy
-pandas
-matplotlib
-scipy
+* numpy
+* pandas
+* matplotlib
+* scipy
 
 e.g. "pip install numpy pandas matplotlib scipy"
 
 
 
-# Step 4: Check Folder Structure
+### Step 4: Check Folder Structure
 
 Make sure the following files are in place (especially under inputs/IEA-15-240-RWT/):
 
+
+
+```text
 project-root/
 ├── inputs/
 │   └── IEA-15-240-RWT/
 │       ├── Airfoils/
 │       ├── IEA_15MW_RWT_Onshore.opt
 │       └── IEA-15-240-RWT_AeroDyn15_blade.dat
-
+```
 
 
 
 Note: Ensure that the inputs/IEA-15-240-RWT/ directory contains:
-Airfoil coordinate files
-Airfoil polar files
-Blade data file
-Power curve data
+* IEA_15MW_RWT_Onshore.opt
+* Airfoils 
+* IEA-15-240-RWT_AeroDyn15_blade.dat
 
 
-# Step 5: Run main.py
+### Step 5: Run main.py
 
 Enter the following in the terminal
 depending on your version of python. if you have python 3 use the following 
--python3 examples/main.py 
+* python3 examples/main.py 
 
 if you dont have the updated version of python use 
-python examples/main.py
+* python examples/main.py
 ]
 
 ## Architecture
 
-# File structure
+### File structure
 
+```text
 project/
 ├── examples/                          # Example scripts and usage
 │   ├── __init__.py
@@ -93,7 +96,7 @@ project/
 │   └── rotor_diagram.jpeg             # Visual reference image
 │
 ├── outputs/                           # All generated outputs
-│   ├── pictures/                      # Visualizations and result plots
+│   ├── pictures/                      # Visualizations vand result plots
 │   └── results/                       # Numerical results (e.g. CSVs)
 │
 ├── src/                               # Source code of the project
@@ -115,32 +118,33 @@ project/
 ├── README.md                          # Project description and usage instructions
 ├── setup.py                           # Script for installing the package
 └── TO_DO.md                           # Ongoing task and feature list
+```
 
-# Code Architecture 
+### Code Architecture 
 
 ![Code Diagram](./outputs/pictures/Codediagram.png)
 
 
-# Class description
+### Class description
 The BemOptimization class implements the core logic for Blade Element Momentum (BEM) analysis of a wind turbine rotor. It simulates aerodynamic behavior at a specific operating point (a wind speed from a power curve) and computes performance metrics like aerodynamic power, torque, and thrust based on blade geometry and airfoil characteristics.
 
 initialize_elements_df(blade_data_df)
---Initializes and returns a DataFrame for blade elements, setting initial induction factors and computing initial flow angles.
+* Initializes and returns a DataFrame for blade elements, setting initial induction factors and computing initial flow angles.
 
 
 optimize_induction_factors(...)
--Performs iterative BEM calculations:
--Updates flow angles, angle of attack, and aerodynamic coefficients (Cl, Cd, Cn, Ct).
--Applies tip loss corrections and computes new induction factors.
--Stops when convergence is reached or iteration limit is hit.
--Updates self.elements_df.
+* Performs iterative BEM calculations:
+* Updates flow angles, angle of attack, and aerodynamic coefficients (Cl, Cd, Cn, Ct).
+* Applies tip loss corrections and computes new induction factors.
+* Stops when convergence is reached or iteration limit is hit.
+* Updates self.elements_df.
 
 calculate_thrust_and_power(...)
--Given converged induction values:
--Calculates differential thrust and torque along the blade.
--Integrates to find total rotor thrust, torque, and aerodynamic power.
--Computes nondimensional coefficients CT and CP
--Results are stored in the instance for later use or plotting.
+* Given converged induction values:
+* Calculates differential thrust and torque along the blade.
+* Integrates to find total rotor thrust, torque, and aerodynamic power.
+* Computes nondimensional coefficients CT and CP
+* Results are stored in the instance for later use or plotting.
 
 
 ## Peer review
