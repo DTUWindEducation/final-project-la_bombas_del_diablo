@@ -3,7 +3,7 @@
 # from pathlib import Path
 import numpy as np
 # import pandas as pd
-import src.functions as fn
+import src.bombas_package.utils.functions as fn  # Custom functions for BEM calculations
 
 
 class BemOptimization:

@@ -14,8 +14,8 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 import numpy as np
 import matplotlib.pyplot as plt
-import src.functions as fn  # Custom functions for BEM calculations
-from src.BemOptimization import BemOptimization  # BEM implementation class
+import src.bombas_package.utils.functions as fn  # Custom functions for BEM calculations
+from src.bombas_package.BemOptimization import BemOptimization  # BEM implementation class
 
 #  Physical and turbine constants
 RHO = 1.225  # Air density in kg/m³
