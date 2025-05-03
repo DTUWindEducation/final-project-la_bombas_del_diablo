@@ -63,44 +63,55 @@ Blade data file
 Power curve data
 ]
 
-# Step 5: Run BemOptimization.py
+# Step 5: Run main.py
 
 Enter the following in the terminal
 
--python3 src/BemOptimization.py 
+-python3 examples/main.py 
 
 ## Architecture
 
+# File structure
+
 project/
-├── inputs/                     # Input configuration and data files
-│   └── IEA-15-240-RWT/
-│       ├── Airfoils/          # Contains airfoil geometry and polar data (.txt, .dat)
-│       ├── IEA_15MW_RWT_Onshore.opt     # Operating conditions
-│       └── IEA-15-240-RWT_AeroDyn15_blade.dat  # Blade geometry data
-│
-├── outputs/                    # Automatically generated outputs from simulations
-│   └── pictures/              # Saved plots: thrust, torque, flow angles, etc.
-│       └── .gitkeep           # Keeps folder tracked in git
-│
-├── src/                        # Source code for BEM and plotting
-│   ├── __init__.py            # Declares src as a package
-│   ├── BemOptimization.py     # BEM Optimization class logic and core simulation
-│   ├── functions.py           # All computational helper functions and plotting
-│
-├── tests/                      # Unit and integration tests
+├── examples/                          # Example scripts and usage
 │   ├── __init__.py
-│   ├── conftest.py           # Pytest fixtures and test configs
-│   └── test_functions.py     # Test cases for function logic
+│   └── main.py                        # Main script to run BEM optimization
 │
-├── .vscode/                    # Editor settings for VSCode
-├── .pytest_cache/             # Pytest cache data (ignored in version control)5
-├── examples/                  # (Optional) Example usage scripts
-├── Outdated_shit/            # Deprecated or unused code/data (review before deletion)
+├── inputs/                            # Input data for turbine model
+│   └── IEA-15-240-RWT/
+│       ├── Airfoils/                  # Airfoil geometry and polar data
+│       ├── IEA_15MW_RWT_Onshore.opt   # OpenFAST .opt file
+│       └── IEA-15-240-RWT_AeroDyn15_blade.dat  # Blade definition
+│   └── rotor_diagram.jpeg             # Visual reference image
 │
-├── .gitignore                 # Files/folders to ignore in version control
-├── .coverage                  # Coverage report (from test runs)
-├── README.md                  # Project overview and instructions
-└── Collaboration.md           # (Optional) Dependency list or team guidelines
+├── outputs/                           # All generated outputs
+│   ├── pictures/                      # Visualizations and result plots
+│   └── results/                       # Numerical results (e.g. CSVs)
+│
+├── src/                               # Source code of the project
+│   └── bombas_package/                # Main Python package for BEM
+│       ├── utils/                     # Utility/helper scripts (if applicable)
+│       ├── __init__.py
+│       └── BemOptimization.py         # Core class for BEM computation
+│
+├── tests/                             # Unit and integration tests
+│   ├── conftest.py                    # Pytest configuration
+│   ├── test_functions.py              # Tests for functions in functions.py
+│   └── __pycache__/                   # Compiled bytecode (ignored by Git)
+│
+├── .coverage                          # Coverage report from pytest-cov
+├── .gitignore                         # Git ignore rules
+├── Aerodynamics of Wind Turbines.pdf # Reference textbook/resource
+├── LICENSE                            # License for open-source usage
+├── pyproject.toml                     # Project metadata and dependencies
+├── README.md                          # Project description and usage instructions
+├── setup.py                           # Script for installing the package
+└── TO_DO.md                           # Ongoing task and feature list
+
+# Code Architecture 
+
+
 
 # Class description
 The BemOptimization class implements the core logic for Blade Element Momentum (BEM) analysis of a wind turbine rotor. It simulates aerodynamic behavior at a specific operating point (a wind speed from a power curve) and computes performance metrics like aerodynamic power, torque, and thrust based on blade geometry and airfoil characteristics.
