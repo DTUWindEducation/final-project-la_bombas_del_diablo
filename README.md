@@ -20,7 +20,7 @@ The objective is to iteratively solve for optimal axial and tangential induction
 ### Step 2: Set up environment Named `new_env_for_BEM`
 
 ### Mac/Linux:
-* ```bash
+* bash
 * python3 -m venv new_env_for_BEM
 * source new_env_for_BEM/bin/activate
  
