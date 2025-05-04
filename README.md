@@ -80,9 +80,9 @@ Class folder placement: final-project-la_bombas_del_diablo\tests\test_bem.py
 
 Tests basic aerodynamic calculations such as flow angle, angle of attack, lift and drag coefficients, and performance metrics like power and thrust.
 
-#### TestInduction
+#### TestInduction 
 
-Tests the update logic for axial and tangential induction factors, including Prandtl’s tip-loss correction and Joe’s iterative method.
+Tests the update logic for axial and tangential induction factors, including Prandtl’s tip-loss correction and iterative method.
 
 #### TestDifferentials
 
@@ -164,6 +164,7 @@ The BEM Optimization package is structured to follow a sequential data-processin
    - Convergence behavior  
 
    These plots support validation and interpretation of the simulation results.
+
 
 A flow diagram of the code can be found in the file `flow_diagram_bem_optimization.png`:
 

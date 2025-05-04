@@ -94,9 +94,9 @@ class TestInduction:
         })
         assert update_delta_thrust_coeff(df2).shape == (1,)
 
-    def test_joe_induction_updates(self):
+    def test_induction_updates(self):
         """
-        Test Joe's method for updating both induction types.
+        Test method for updating both induction types.
         Validates that all returned values are numerical and defined.
         """
         df = pd.DataFrame({
@@ -104,8 +104,8 @@ class TestInduction:
             'local_solidity': [0.05], 'Ct': [0.2], 'flow_angles_rad': [0.2],
             'axial_induction': [0.3]
         })
-        assert np.isfinite(update_axial_joe(df)).all()
-        assert np.isfinite(update_tangential_joe(df)).all()
+        assert np.isfinite(update_axial(df)).all()
+        assert np.isfinite(update_tangential(df)).all()
 
 # ============================================================
 # SECTION: Differential Load Computation
