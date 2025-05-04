@@ -1,15 +1,27 @@
-# tests/test_functions.py
+
+# Test suite for the BEM (Blade Element Momentum) optimization package
+# Includes tests for physics models, induction logic, convergence, file I/O, plotting, and full optimization
+# ------------------------------------------------------------
+
 import pytest
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from src.bombas_package.utils.functions import *
-from src.bombas_package.BemOptimization import BemOptimization  # BEM implementation class
+from src.bombas_package.BemOptimization import BemOptimization
 
-# ------------------ Core Math & Physics ------------------
+# ============================================================
+# SECTION: Core Aerodynamic Calculations
+# ============================================================
 
 class TestCorePhysics:
     def test_flow_and_local_angle_and_coefficients(self):
+        """
+        Test the computation of:
+        - Flow angle (phi) from axial and tangential induction.
+        - Angle of attack (alpha) from flow angle and blade twist.
+        Ensure outputs are finite and valid.
+        """
         df = pd.DataFrame({
             'axial_induction': [0.2],
             'tangential_induction': [0.05],
@@ -23,6 +35,10 @@ class TestCorePhysics:
         assert np.isfinite(alpha_deg).all()
 
     def test_lift_drag_and_force_coeffs(self):
+        """
+        Test interpolation of Cl/Cd from airfoil polars.
+        Then test conversion to normal and tangential force coefficients.
+        """
         df = pd.DataFrame({'local_angle_of_attack_deg': [5.0]})
         polar = {'00': pd.DataFrame({'Alpha': [0, 10], 'Cl': [0.5, 1.0], 'Cd': [0.01, 0.02]})}
         Cl, Cd = interpolate_Cl_Cd_coeff(df, polar)
@@ -33,16 +49,26 @@ class TestCorePhysics:
         assert compute_tangential_coeff(df2)[0] > 0
 
     def test_power_thrust_coeff_and_total(self):
+        """
+        Test physical coefficient formulas (Cp, Ct) and total load summation.
+        Ensures numerical correctness and boundary values.
+        """
         Ct = compute_thrust_coeff(1.225, 100.0, 10.0, 500.0)
         Cp = compute_power_coeff(1.225, 100.0, 10.0, 1000.0)
         thrust, torque = compute_total_loads(100, 50, 3)
         assert 0 <= Ct <= 2 and 0 <= Cp <= 1
         assert thrust == 300 and torque == 150
 
-# ------------------ Induction Factor Logic ------------------
+# ============================================================
+# SECTION: Induction Factor Updates
+# ============================================================
 
 class TestInduction:
     def test_update_all_induction_types(self):
+        """
+        Test update logic for axial and tangential induction factors.
+        Verifies stability (finite values) for basic input.
+        """
         df = pd.DataFrame({
             'flow_angles_rad': [0.2],
             'local_solidity': [0.05],
@@ -53,6 +79,11 @@ class TestInduction:
         assert np.isfinite(update_tangential(df)).all()
 
     def test_prandtl_and_delta_thrust(self):
+        """
+        Test Prandtl tip-loss correction and delta thrust coefficient.
+        - Prandtl correction must return value in [0, 1].
+        - Delta thrust should produce a correctly shaped output.
+        """
         df = pd.DataFrame({'span_position': [5.0], 'flow_angles_rad': [0.1]})
         F = prandtl_correction(df, 3, 50)
         assert 0 <= F[0] <= 1
@@ -64,6 +95,10 @@ class TestInduction:
         assert update_delta_thrust_coeff(df2).shape == (1,)
 
     def test_joe_induction_updates(self):
+        """
+        Test Joe's method for updating both induction types.
+        Validates that all returned values are numerical and defined.
+        """
         df = pd.DataFrame({
             'delta_thrust_coeff': [0.5], 'prandtl_factor': [0.9],
             'local_solidity': [0.05], 'Ct': [0.2], 'flow_angles_rad': [0.2],
@@ -72,19 +107,31 @@ class TestInduction:
         assert np.isfinite(update_axial_joe(df)).all()
         assert np.isfinite(update_tangential_joe(df)).all()
 
-# ------------------ Differentials & Power ------------------
+# ============================================================
+# SECTION: Differential Load Computation
+# ============================================================
 
 class TestDifferentials:
     def test_dT_dM_and_power(self):
+        """
+        Check differential thrust and torque computations as well as aerodynamic power.
+        Uses fixed inputs with known/expected outputs.
+        """
         dT = compute_dT(10, 1, 1.225, 10, 0.3)
         dM = compute_dM(10, 1, 1.225, 10, 0.3, 0.05, 1)
         P = compute_aerodynamic_power(10, 1)
         assert dT > 0 and dM > 0 and P == 10
 
-# ------------------ Convergence & Flow Logic ------------------
+# ============================================================
+# SECTION: Convergence and Iterative Updates
+# ============================================================
 
 class TestConvergenceFlow:
     def test_convergence_behavior(self):
+        """
+        Simulate 2 iterations and check if convergence is detected.
+        Test ensures the convergence flag and iteration count are returned properly.
+        """
         df = pd.DataFrame({
             'axial_induction': [0.1, 0.2],
             'tangential_induction': [0.05, 0.06],
@@ -95,6 +142,10 @@ class TestConvergenceFlow:
         assert not conv and iters == 3
 
     def test_compute_spanwise_flow(self):
+        """
+        Test flow angle calculation across a span.
+        Ensures output shape and correctness for 4 spanwise segments.
+        """
         df = pd.DataFrame({
             'axial_induction': [0.2] * 4,
             'tangential_induction': [0.05] * 4,
@@ -103,10 +154,15 @@ class TestConvergenceFlow:
         phi_rad, phi_deg = compute_flow_angle(df, 10, 2)
         assert len(phi_rad) == 4 and len(phi_deg) == 4
 
-# ------------------ File Reading ------------------
+# ============================================================
+# SECTION: File Parsing & Handling
+# ============================================================
 
 class TestFileReaders:
     def test_read_valid_airfoil_and_blade_files(self, tmp_path):
+        """
+        Create dummy airfoil and blade data files and validate parser behavior.
+        """
         af = tmp_path / "AF01.txt"
         af.write_text("50  ! Number of points\nHeader\nHeader\nHeader\nHeader\n!  x/c        y/c\n0.0 0.0\n0.1 0.1\n")
         num, df = read_airfoil_file(af)
@@ -123,6 +179,11 @@ class TestFileReaders:
         assert 'span_position' in df3.columns and np.isclose(df3['r/R'].iloc[-1], 1.0)
 
     def test_handle_missing_or_invalid_files(self, tmp_path):
+        """
+        Ensure function handles:
+        - polar file missing expected Cl/Cd columns
+        - airfoil coordinate file with no headers
+        """
         polar = tmp_path / "Polar_99.dat"
         polar.write_text("1000 Reynolds number\n2 NumAlf\nAlpha Cm\n0 0.1\n10 0.2\n")
         num, df = read_airfoil_polar_file(polar)
@@ -133,15 +194,23 @@ class TestFileReaders:
         coord, polar = read_all_airfoil_files(tmp_path)
         assert "02" in coord and "02" not in polar
 
-# ------------------ Plotting Tests ------------------
+# ============================================================
+# SECTION: Plotting Logic 
+# ============================================================
 
 class TestPlotting:
     @pytest.fixture(autouse=True)
     def patch_plt(self, monkeypatch):
+        """
+        Disable actual file creation for all plots.
+        """
         monkeypatch.setattr(plt, "savefig", lambda *args, **kwargs: None)
         monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
 
     def test_all_plot_functions(self):
+        """
+        Validate all plotting functions run without error and use correct arguments.
+        """
         airfoil_coords = {"00": pd.DataFrame({"x/c": [0, 1], "y/c": [0, 0]})}
         span = pd.Series([1])
         twist = pd.Series([0])
@@ -161,7 +230,6 @@ class TestPlotting:
             'Cp': [0.3, 0.4, 0.5],
             'Ct': [0.7, 0.6, 0.5]
         })
-
         non_converged_df = pd.DataFrame({'wind_speed': [], 'Cp': [], 'Ct': []})
 
         plot_results_vs_ws(
@@ -180,13 +248,20 @@ class TestPlotting:
         df2 = pd.DataFrame({'x': [0, 1, 2], 'y': [0.1, 0.2, 0.3]})
         plot_scatter(df2, 'x', 'y', 'test', 'x', 'y', show_plot=False)
 
-# ------------------ BEM Optimization ------------------
+# ============================================================
+# SECTION: Full BEM Optimization
+# ============================================================
 
 class TestBemOptimization:
     def test_optimization_and_thrust(self):
+        """
+        Integration test for the BEM optimization workflow:
+        - Initialization
+        - Iteration over induction factors
+        - Final power/thrust computation
+        """
         power_df = pd.DataFrame({'wind_speed': [8], 'rot_speed': [12.1], 'pitch': [0.0]})
         blade_df = pd.DataFrame({'span_position': [2, 4], 'chord_length': [1.0, 0.8], 'twist_angle': [5.0, 3.0]})
-        
         polar = {'00': pd.DataFrame({
             'Alpha': [-10, 0, 10],
             'Cl': [-0.5, 0.0, 0.5],
