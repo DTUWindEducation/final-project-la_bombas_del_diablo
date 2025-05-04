@@ -17,7 +17,7 @@ The objective is to iteratively solve for optimal axial and tangential induction
 ### Step 1: Clone the repository
 
 (In git bash)
-git clone https://github.com/github-username/final-project-la_bombas_del_diablo.git
+git clone https://github.com/DTUWindEducation/final-project-la_bombas_del_diablo.git
 cd final-project-la_bombas_del_diablo
 
 ### Step 2: Navigate to the root of the cloned repository
