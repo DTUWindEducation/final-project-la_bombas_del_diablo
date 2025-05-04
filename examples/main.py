@@ -32,9 +32,9 @@ def main():
     2. Runs BEM simulation for each wind speed
     3. Processes and plots results
     """
-    print("initializing main.py")
+    print("\ninitializing main.py")
     
-    # Load all required input data for the simulation
+    # 1. Load and parse the provided turbine data
     # Navigate to project root directory
     DATA_DIR = Path(__file__).resolve().parent.parent
 
@@ -56,6 +56,7 @@ def main():
         DATA_DIR / 'inputs' / 'IEA-15-240-RWT' /
           'IEA-15-240-RWT_AeroDyn15_blade.dat')
     
+    # 2. Plot the provided airfoil shapes in one figure
     # Create a 3D visualization of the blade with all airfoil profiles
     fn.plot_airfoils_3d(airfoil_coords, blade_data_df['span_position'],
                         blade_data_df['twist_angle'])
@@ -68,7 +69,19 @@ def main():
         # Create an instance with parameters for this wind speed
         # (including blade geometry, pitch angle, rotational speed)
         instance = BemOptimization(i, power_curve_df, blade_data_df)
-        
+
+        # The functional requirements for the BEM project are completed
+        # within the class function "optimize_induction_factors"
+        # The steps involved are:
+
+        # 3. Compute lift coefficient (Cl) and drag coefficient (Cd)
+        # as function of span position (r) and angle of attack (α)
+        # using the airfoil polar data and the blade geometry
+
+        # 4. Compute the axial (a) and tangential (a′) induction factors
+        # as function of span position (r), the inflow wind speed V0,
+        #  the blade pitch angle (θp) and the rotational speed ω.
+
         # Run the BEM iterative algorithm to find induction factors
         instance.optimize_induction_factors(
             instance.elements_df,  # Dataframe with blade element data
@@ -81,8 +94,15 @@ def main():
             max_iterations=100,    # Maximum number of iterations
             tolerance=1e-3         # Convergence tolerance
         )
+        # Similiarly, step 5 is completed within the class function
+        # "calculate_thrust_and_power"
+
+        # 5. Compute the thrust (T), torque (M), and power (P) of the
+        # rotor as function of the inflow wind speed V0, the blade pitch
+        #  angle (θp) and the rotational speed ω, using the converged 
+        # induction factors.
+
         
-        # Calculate thrust and power using the converged induction factors
         instance.calculate_thrust_and_power(instance.elements_df, 
                                             RHO, BLADES_NO, A)
         
@@ -112,28 +132,21 @@ def main():
     convergence_mask = np.array([optimization_instances[i].convergence_reached 
                                 for i in range(len(optimization_instances))])
     
-    converged_results_df = results_df[convergence_mask].copy()
-    # Plot the results and compare with reference data
-    # Power curve comparison
-    fn.plot_results_vs_ws(converged_results_df, results_df, 'aero_power',
-                           'Reference power curve', 'aero_power_bem',
-                           'BEM power curve', 'aero_power_bem',
-                            'BEM (not converged)', 'Power', '[kW]')
-                          
-    # Thrust curve comparison
-    fn.plot_results_vs_ws(converged_results_df, results_df, 'aero_thrust',
-                          'Reference thrust curve', 'total_thrust_bem',
-                          'BEM thrust curve', 'total_thrust_bem',
-                          'BEM (not converged)', 'Thrust', '[kN]')
-    
-    # fn.plot_results_vs_ws(converged_results_df, 'aero_power', 
-    #                       'Converged Reference power curve', 
-    #                       'aero_power_bem', 'BEM power curve', 'Power [kW]')
-    # # Thrust curve comparison
-    # fn.plot_results_vs_ws(converged_results_df, 'aero_thrust', 
-    #                       'Converged Reference thrust curve', 
-    #                       'total_thrust_bem', 'BEM thrust curve', 
-    #                       'Thrust [kN]')
+    # converged_results_df = results_df[convergence_mask].copy()
+    converged_results_df = results_df[convergence_mask].copy().reset_index(drop=True)
+
+    # Step 6 and 7 are completed with the function fn.analyze_max_thrust_strategy
+
+    # 6 Compute optimal operational strategy, i.e., blade pitch angle (θp)
+    # and rotational speed (ω), as function of wind speed (V0), based on
+    # the provided operational strategy in IEA_15MW_RWT_Onshore.opt
+
+    # 7. Compute and plot power curve ($P(V_0)$) and thrust curve ($T(V_0)$)
+    # based on the optimal operational strategy obtained in the previous
+    # function.
+
+    optimal_strategy = fn.analyze_max_thrust_strategy(converged_results_df, results_df)
+    # print(f"The optimal wind speed is {optimal_strategy['wind_speed']} m/s")
     
     # Save the results to CSV files
     results_df.to_csv(results_dir / 'results.csv', index=False)

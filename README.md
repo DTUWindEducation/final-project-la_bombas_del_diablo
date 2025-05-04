@@ -109,3 +109,46 @@ When working individually, follow this Git workflow and communication protocol:
 6. **Ask in chat**: "Please pull it."
 7. **Post in chat**: Current status and progress.
 8. *(Optional)* Start working on a new task, and repeat the workflow from step 1.
+
+
+
+
+
+├── LICENSE
+├── pyproject.toml
+├── README.md
+├── setup.py
+├── init.py
+│
+├── examples/
+│ ├── main.py
+│ └── init.py
+│
+├── inputs/
+│ ├── rotor_diagram.jpeg
+│ └── IEA-15-240-RWT/
+│ ├── IEA-15-240-RWT_AeroDyn15_blade.dat
+│ ├── IEA_15MW_RWT_Onshore.opt
+│ └── Airfoils/
+│
+├── outputs/
+│ ├── pictures/
+│ │ ├── 3D_Airfoil_Geometry.png
+│ │ ├── Converged_and_non_converged_Power_vs_wind_speed.png
+│ │ └── Converged_and_non_converged_Thrust_vs_wind_speed.png
+│ └── results/
+│  ├── converged_results_df.csv
+│  └── results.csv
+│
+├── src/
+│ └── bombas_package/
+│   ├── BemOptimization.py
+│ ├── init.py
+│ └── utils/
+│   ├──functions.py
+│   ├──init.py
+│
+├── tests/
+│   ├── .gitkeep
+│   ├── conftest.py
+│   └── test_bem.py

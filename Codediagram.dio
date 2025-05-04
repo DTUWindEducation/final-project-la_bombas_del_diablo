@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="HcsooGtjJQzSXpFkrT9_" name="Page-1">
-        <mxGraphModel dx="1750" dy="742" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+        <mxGraphModel dx="1193" dy="916" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -43,8 +43,11 @@
                         <mxPoint x="380" y="590" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="15" value="Store and Plot Results&amp;nbsp;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="1" vertex="1">
-                    <mxGeometry x="300" y="870" width="120" height="60" as="geometry"/>
+                <mxCell id="41" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="15" target="38">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="15" value="&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;p lang=&quot;en-GB&quot; style=&quot;margin:0in;font-family:Calibri;font-size:11.0pt&quot;&gt;&lt;span style=&quot;font-size: 11pt; background-color: transparent;&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/p&gt;&lt;p lang=&quot;en-GB&quot; style=&quot;margin:0in;font-family:Calibri;font-size:11.0pt&quot;&gt;&lt;span style=&quot;font-size: 11pt; background-color: transparent;&quot;&gt;Compute optimal operational strategy:&lt;/span&gt;&lt;/p&gt;&lt;p lang=&quot;en-GB&quot; style=&quot;margin:0in;font-family:Calibri;font-size:11.0pt&quot;&gt;&lt;span style=&quot;font-size: 11pt; background-color: transparent;&quot;&gt;analyze_max_thrust_strategy()&lt;/span&gt;&lt;/p&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="1" vertex="1">
+                    <mxGeometry x="225" y="860" width="270" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="16" value="" style="endArrow=classic;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="8" target="15" edge="1">
                     <mxGeometry width="50" height="50" relative="1" as="geometry">
@@ -95,8 +98,17 @@
                 <mxCell id="35" value="Power curve data" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="300" y="270" width="120" height="30" as="geometry"/>
                 </mxCell>
-                <mxCell id="37" value="&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;Blade data coordinates&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+                <mxCell id="37" value="&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;Blade data coordinates&lt;/span&gt;" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="300" y="170" width="120" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="42" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="38" target="39">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="38" value="&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;p lang=&quot;en-GB&quot; style=&quot;margin:0in;font-family:Calibri;font-size:11.0pt&quot;&gt;&lt;span style=&quot;font-size: 11pt; background-color: transparent;&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/p&gt;&lt;p lang=&quot;en-GB&quot; style=&quot;margin:0in;font-family:Calibri;font-size:11.0pt&quot;&gt;&lt;span style=&quot;font-size: 11pt; background-color: transparent;&quot;&gt;Compute and plot power and thrust curve&amp;nbsp;&lt;/span&gt;&lt;/p&gt;&lt;p lang=&quot;en-GB&quot; style=&quot;margin:0in;font-family:Calibri;font-size:11.0pt&quot;&gt;&lt;span style=&quot;background-color: transparent; font-size: 11pt;&quot;&gt;analyze_max_thrust_strategy()&lt;/span&gt;&lt;/p&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+                    <mxGeometry x="223.75" y="940" width="272.5" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="39" value="&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;p lang=&quot;en-GB&quot; style=&quot;margin:0in;font-family:Calibri;font-size:11.0pt&quot;&gt;&lt;span style=&quot;font-size: 11pt; background-color: transparent;&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/p&gt;&lt;p lang=&quot;en-GB&quot; style=&quot;margin:0in;font-family:Calibri;font-size:11.0pt&quot;&gt;Print and store results&lt;/p&gt;&lt;p lang=&quot;en-GB&quot; style=&quot;margin:0in;font-family:Calibri;font-size:11.0pt&quot;&gt;&lt;br&gt;&lt;/p&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+                    <mxGeometry x="277.5" y="1020" width="165" height="40" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>
