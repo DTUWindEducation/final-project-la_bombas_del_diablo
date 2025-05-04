@@ -546,53 +546,7 @@ def compute_total_loads(thrust_one_blade, torque_one_blade, num_blades):
 
 
 # %% Induction factors
-def update_axial(df):
-    """
-    Update the axial induction factor based on flow angle, local solidity, and Cn.
-
-    Parameters
-    ----------
-    df : DataFrame
-        The input dataframe containing the necessary columns for flow angle,
-        local solidity, and normal force coefficient.
-
-    Returns
-    -------
-    ndarray
-        Array of updated axial induction factors for each span position.
-    """
-    phi = df['flow_angles_rad'].values
-    sigma = df['local_solidity'].values
-    Cn = df['Cn'].values
-
-    axial = 1 / (4 * (sin(phi) ** 2) / (sigma * Cn) + 1)
-
-    return axial
-
-
-def update_tangential(df):
-    """
-    Update the tangential induction factor based on flow angle, local solidity, and Ct.
-
-    Parameters
-    ----------
-    df : DataFrame
-
-    Returns
-    -------
-    float
-        Updated tangential induction factor
-    """
-    phi = df['flow_angles_rad'].values
-    sigma = df['local_solidity'].values
-    Ct = df['Ct'].values
-
-    tangential = 1 / (4 * (sin(phi) * cos(phi)) / (sigma * Ct) - 1)
-
-    return tangential
-
-
-def update_axial_joe(elements_df):
+def update_axial(elements_df):
     """Update axial induction factor with correction.
     
     Parameters
@@ -638,7 +592,7 @@ def update_axial_joe(elements_df):
     return a_updated
 
 
-def update_tangential_joe(elements_df):
+def update_tangential(elements_df):
     """Update tangential induction factor with correction
 
     Parameters
@@ -884,7 +838,7 @@ def plot_airfoils_3d(airfoil_coords, blade_span, twist_angle, show_plot=False):
 
     save_path = pictures_dir / '3D_Airfoil_Geometry.png'
     plt.savefig(save_path)
-    print(f'Saved 3D airfoil plot to {save_path}')
+    print(f'\nSaved 3D airfoil plot to {save_path}')
 
     if show_plot:
         plt.show()
@@ -1172,6 +1126,132 @@ def plot_results_vs_ws(converged_results, results_not_converged,
     plt.close()
 
 
+def analyze_max_thrust_strategy(converged_results, results_not_converged, results_dir=None):
+    """
+    Analyze the operational strategy at maximum thrust and create comparison plots
+    showing both converged and non-converged results.
+    
+    Parameters
+    ----------
+    converged_results : pd.DataFrame
+        DataFrame containing converged BEM results
+    results_not_converged : pd.DataFrame
+        DataFrame containing non-converged BEM results
+    results_dir : pathlib.Path or str, optional
+        Directory to save output files. If None, uses default project structure.
+        
+    Returns
+    -------
+    dict
+        Dictionary with optimal operational parameters at max thrust
+    """
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from pathlib import Path
+
+     # 6 Compute optimal operational strategy, i.e., blade pitch angle (θp)
+    # and rotational speed (ω), as function of wind speed (V0), based on
+    # the provided operational strategy in IEA_15MW_RWT_Onshore.opt
+    
+    # Find the wind speed at which the maximum thrust occurs
+    max_thrust_index = converged_results['total_thrust_bem'].idxmax()
+    max_thrust_wind_speed = converged_results['wind_speed'].iloc[max_thrust_index]
+    max_thrust_value = converged_results['total_thrust_bem'].iloc[max_thrust_index]
+    
+    # Find the rotational speed and pitch angle at this wind speed
+    max_thrust_rotational_speed = converged_results['rot_speed'].iloc[max_thrust_index]
+    max_thrust_pitch_angle = converged_results['pitch'].iloc[max_thrust_index]
+
+
+    # 7. Compute and plot power curve ($P(V_0)$) and thrust curve ($T(V_0)$)
+    # based on the optimal operational strategy obtained in the previous
+    # function.
+
+    # Plot the optimal point on the power curve and thrust curve
+    fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+    
+    # Power curve plot
+    # Reference Data
+    ax[0].plot(results_not_converged['wind_speed'], 
+               results_not_converged['aero_power'],
+               label='Reference Power Curve', color='blue')
+    # Not Converged Data
+    ax[0].plot(results_not_converged['wind_speed'], 
+               results_not_converged['aero_power_bem'],
+               label='BEM Power Curve (not converged)', color='red')
+    # Converged Data
+    ax[0].plot(converged_results['wind_speed'], 
+               converged_results['aero_power_bem'],
+               label='BEM Power Curve (converged)', color='black')
+    # Max thrust point
+    ax[0].scatter(max_thrust_wind_speed, 
+                 converged_results['aero_power_bem'].iloc[max_thrust_index],
+                 color='green', s=80, marker='*', label='Max Thrust Point')
+    ax[0].set_xlabel('Wind Speed [m/s]')
+    ax[0].set_ylabel('Power [kW]')
+    ax[0].set_title('Power Curve Comparison')
+    ax[0].legend()
+    ax[0].grid(True)
+
+    # Thrust curve plot
+    # Reference Data
+    ax[1].plot(results_not_converged['wind_speed'], 
+               results_not_converged['aero_thrust'],
+               label='Reference Thrust Curve', color='blue')
+    # Not Converged Data
+    ax[1].plot(results_not_converged['wind_speed'], 
+               results_not_converged['total_thrust_bem'],
+               label='BEM Thrust Curve (not converged)', color='red')
+    # Converged Data
+    ax[1].plot(converged_results['wind_speed'], 
+               converged_results['total_thrust_bem'],
+               label='BEM Thrust Curve (converged)', color='black')
+    # Max thrust point
+    ax[1].scatter(max_thrust_wind_speed, 
+                 converged_results['total_thrust_bem'].iloc[max_thrust_index],
+                 color='green', s=80, marker='*', label='Max Thrust Point')
+    ax[1].set_xlabel('Wind Speed [m/s]')
+    ax[1].set_ylabel('Thrust [kN]')
+    ax[1].set_title('Thrust Curve Comparison')
+    ax[1].legend()
+    ax[1].grid(True)
+    
+    plt.tight_layout()
+    
+    # Save figure using the same path resolution logic as the original function
+    current_file = Path(__file__).resolve()
+    # Navigate up to find the project root
+    project_root = current_file.parent.parent.parent.parent
+    
+    # Create outputs directory at the project root
+    pictures_dir = project_root / 'outputs' / 'pictures'
+    pictures_dir.mkdir(parents=True, exist_ok=True)
+    
+    save_path = pictures_dir / 'power_thrust_curve_comparison.png'
+    plt.savefig(save_path)
+    print(f'\nSaved power and thrust curve comparison to {save_path}')
+    
+    # Create a dictionary with the optimal strategy parameters
+    optimal_strategy = {
+        'wind_speed': max_thrust_wind_speed,
+        'thrust': max_thrust_value,
+        'rotational_speed': max_thrust_rotational_speed,
+        'pitch_angle': max_thrust_pitch_angle
+    }
+    
+    # Print the optimal operational strategy
+    print('\n')
+    print('###################################################')
+    print(f"Optimal operational strategy at max thrust:")
+    print('\n')
+    print(f"Wind Speed: {optimal_strategy['wind_speed']:.1f} m/s")
+    print(f"Max Thrust: {optimal_strategy['thrust']:.0f} kN")
+    print(f"Rotational Speed: {optimal_strategy['rotational_speed']:.2f} RPM")
+    print(f"Pitch Angle: {optimal_strategy['pitch_angle']} degrees")
+    print('###################################################')
+    print('\n')
+    
+    return optimal_strategy
 # %% Step 1
 # def flow_angle_loop(span_positions, V0, omega):
 #     """

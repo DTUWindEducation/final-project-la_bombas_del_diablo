@@ -98,6 +98,11 @@ class BemOptimization:
                 elements_df, self.pitch_deg
             ))
 
+            # 3. Compute lift coefficient (Cl) and drag coefficient (Cd)
+            # as function of span position (r) and angle of attack (α)
+            # using the airfoil polar data and the blade geometry
+
+        
             # Interpolate lift and drag coefficients (And put in df)
             elements_df['Cl'], elements_df['Cd'] = fn.interpolate_Cl_Cd_coeff(
                 elements_df, airfoil_polar
@@ -120,9 +125,14 @@ class BemOptimization:
                 elements_df
             )
 
+
+            # 4. Compute the axial (a) and tangential (a′) induction factors
+            # as function of span position (r), the inflow wind speed V0,
+            #  the blade pitch angle (θp) and the rotational speed ω.
+
             # Update the induction factors (And put in df)
-            elements_df['axial_induction_new'] = fn.update_axial_joe(elements_df)
-            elements_df['tangential_induction_new'] = fn.update_tangential_joe(elements_df)
+            elements_df['axial_induction_new'] = fn.update_axial(elements_df)
+            elements_df['tangential_induction_new'] = fn.update_tangential(elements_df)
 
             # Check convergence and update the induction factors in the df
             convergence_reached, elements_df, iteration_counter = fn.check_convergence(

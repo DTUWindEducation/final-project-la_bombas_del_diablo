@@ -158,12 +158,9 @@ The BEM Optimization package is structured to follow a sequential data-processin
    using the final values of flow variables and forces.
 
 6. **Results Output and Plotting**  
-   Simulation results are stored and visualized. This includes:
-   - Power curves  
-   - Thrust profiles  
-   - Convergence behavior  
+   Simulation results are stored and visualized. 
 
-   These plots support validation and interpretation of the simulation results.
+   The operating point with the highest thrust which is also the rated power for the optimized parameters is found, and the results are plotted with the "optimal" operating point marked in a power curve, and a thrust curve diagram. The plots display both the reference data, the unconverged and the converged results are displayed. The plot is saved to the outputs folder, and the optimal configuration is printed to the terminal.   
 
 
 A flow diagram of the code can be found in the file `flow_diagram_bem_optimization.png`:
