@@ -42,54 +42,19 @@ python .\examples\main.py
 
 
 ## Architecture
-final-project-la_bombas_del_diablo/
-│
-├── Aerodynamics of Wind Turbines_24_09_05_13_53_36.pdf
-├── Collaboration.md
-├── LICENSE
-├── pyproject.toml
-├── README.md
-├── setup.py
-├── init.py
-│
-├── examples/
-│ ├── main.py
-│ └── init.py
-│
-├── inputs/
-│ ├── rotor_diagram.jpeg
-│ └── IEA-15-240-RWT/
-│ ├── IEA-15-240-RWT_AeroDyn15_blade.dat
-│ ├── IEA_15MW_RWT_Onshore.opt
-│ └── Airfoils/
-│
-├── outputs/
-│ ├── pictures/
-│ │ ├── 3D_Airfoil_Geometry.png
-│ │ ├── Converged_and_non_converged_Power_vs_wind_speed.png
-│ │ └── Converged_and_non_converged_Thrust_vs_wind_speed.png
-│ └── results/
-│ ├── converged_results_df.csv
-│ └── results.csv
-│
-├── src/
-│ └── bombas_package/
-│ ├── BemOptimization.py
-│ ├── init.py
-│ └── utils/
-│ ├── functions.py
-│ └── init.py
-│
-└── tests/
-├── .gitkeep
-├── conftest.py
-└── test_bem.py
+This section describes the folder structure, the main class `BemOptimization` and its key functions, as well as the overall workflow of the package — visually presented in a flow diagram and complemented by a more technical explanation.
+
+
+The folder structure of the package 
+
+![Folder structure](./folder_structure.png)
+
 
 ## Package Structure and Classes
 
 ### Main Script
 
-### Main Class
+### BemOptimization
 
 This class handles the entire BEM optimization and results extraction process.
 
@@ -113,6 +78,7 @@ Computes total thrust, torque, and aerodynamic power from the blade element data
 
 
 ## Code Description
+The code works bla bla bla.
 
 A flow diagram of the code can be found in the file `flow_diagram_bem_optimization.png`:
 
