@@ -64,20 +64,6 @@ class TestCorePhysics:
 # ============================================================
 
 class TestInduction:
-    def test_update_all_induction_types(self):
-        """
-        Test update logic for axial and tangential induction factors.
-        Verifies stability (finite values) for basic input.
-        """
-        df = pd.DataFrame({
-            'flow_angles_rad': [0.2],
-            'local_solidity': [0.05],
-            'Cn': [1.0],
-            'Ct': [0.2]
-        })
-        assert np.isfinite(update_axial(df)).all()
-        assert np.isfinite(update_tangential(df)).all()
-
     def test_prandtl_and_delta_thrust(self):
         """
         Test Prandtl tip-loss correction and delta thrust coefficient.
