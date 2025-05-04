@@ -546,53 +546,7 @@ def compute_total_loads(thrust_one_blade, torque_one_blade, num_blades):
 
 
 # %% Induction factors
-def update_axial(df):
-    """
-    Update the axial induction factor based on flow angle, local solidity, and Cn.
-
-    Parameters
-    ----------
-    df : DataFrame
-        The input dataframe containing the necessary columns for flow angle,
-        local solidity, and normal force coefficient.
-
-    Returns
-    -------
-    ndarray
-        Array of updated axial induction factors for each span position.
-    """
-    phi = df['flow_angles_rad'].values
-    sigma = df['local_solidity'].values
-    Cn = df['Cn'].values
-
-    axial = 1 / (4 * (sin(phi) ** 2) / (sigma * Cn) + 1)
-
-    return axial
-
-
-def update_tangential(df):
-    """
-    Update the tangential induction factor based on flow angle, local solidity, and Ct.
-
-    Parameters
-    ----------
-    df : DataFrame
-
-    Returns
-    -------
-    float
-        Updated tangential induction factor
-    """
-    phi = df['flow_angles_rad'].values
-    sigma = df['local_solidity'].values
-    Ct = df['Ct'].values
-
-    tangential = 1 / (4 * (sin(phi) * cos(phi)) / (sigma * Ct) - 1)
-
-    return tangential
-
-
-def update_axial_joe(elements_df):
+def update_axial(elements_df):
     """Update axial induction factor with correction.
     
     Parameters
@@ -638,7 +592,7 @@ def update_axial_joe(elements_df):
     return a_updated
 
 
-def update_tangential_joe(elements_df):
+def update_tangential(elements_df):
     """Update tangential induction factor with correction
 
     Parameters

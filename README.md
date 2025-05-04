@@ -158,12 +158,9 @@ The BEM Optimization package is structured to follow a sequential data-processin
    using the final values of flow variables and forces.
 
 6. **Results Output and Plotting**  
-   Simulation results are stored and visualized. This includes:
-   - Power curves  
-   - Thrust profiles  
-   - Convergence behavior  
+   Simulation results are stored and visualized. 
 
-   These plots support validation and interpretation of the simulation results.
+   The operating point with the highest thrust which is also the rated power for the optimized parameters is found, and the results are plotted with the "optimal" operating point marked in a power curve, and a thrust curve diagram. The plots display both the reference data, the unconverged and the converged results are displayed. The plot is saved to the outputs folder, and the optimal configuration is printed to the terminal.   
 
 A flow diagram of the code can be found in the file `flow_diagram_bem_optimization.png`:
 
@@ -194,46 +191,3 @@ When working individually, follow this Git workflow and communication protocol:
 6. **Ask in chat**: "Please pull it."
 7. **Post in chat**: Current status and progress.
 8. *(Optional)* Start working on a new task, and repeat the workflow from step 1.
-
-
-
-
-
-├── LICENSE
-├── pyproject.toml
-├── README.md
-├── setup.py
-├── init.py
-│
-├── examples/
-│ ├── main.py
-│ └── init.py
-│
-├── inputs/
-│ ├── rotor_diagram.jpeg
-│ └── IEA-15-240-RWT/
-│ ├── IEA-15-240-RWT_AeroDyn15_blade.dat
-│ ├── IEA_15MW_RWT_Onshore.opt
-│ └── Airfoils/
-│
-├── outputs/
-│ ├── pictures/
-│ │ ├── 3D_Airfoil_Geometry.png
-│ │ ├── Converged_and_non_converged_Power_vs_wind_speed.png
-│ │ └── Converged_and_non_converged_Thrust_vs_wind_speed.png
-│ └── results/
-│  ├── converged_results_df.csv
-│  └── results.csv
-│
-├── src/
-│ └── bombas_package/
-│   ├── BemOptimization.py
-│ ├── init.py
-│ └── utils/
-│   ├──functions.py
-│   ├──init.py
-│
-├── tests/
-│   ├── .gitkeep
-│   ├── conftest.py
-│   └── test_bem.py
