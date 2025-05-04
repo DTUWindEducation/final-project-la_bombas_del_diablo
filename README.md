@@ -72,13 +72,98 @@ Iteratively solves for optimal axial and tangential induction factors until conv
 Computes total thrust, torque, and aerodynamic power from the blade element data.
 
 
-# Test Classes Description
+## Test Classes Description
 
+Class folder placement: final-project-la_bombas_del_diablo\tests\test_bem.py
+
+#### TestCorePhysics
+
+Tests basic aerodynamic calculations such as flow angle, angle of attack, lift and drag coefficients, and performance metrics like power and thrust.
+
+#### TestInduction
+
+Tests the update logic for axial and tangential induction factors, including Prandtl’s tip-loss correction and Joe’s iterative method.
+
+#### TestDifferentials
+
+Verifies the calculation of differential thrust, torque, and aerodynamic power based on blade element data.
+
+#### TestConvergenceFlow
+
+Checks the convergence behavior of the iterative optimization loop and validates spanwise flow angle computations.
+
+#### TestFileReaders
+
+Tests that airfoil geometry, polar data, and blade design files are correctly read and handled, including missing or malformed input.
+
+#### TestPlotting
+
+Validates that all plotting functions execute without errors. File saving is suppressed during tests to avoid side effects.
+
+#### TestBemOptimization
+
+Integration test that runs the full BEM optimization workflow, from initialization to induction optimization and final performance calculations.
 
 
 
 ## Code Description
-The code works bla bla bla.
+
+### Package Architecture Description
+The BEM Optimization package is structured to follow a sequential data-processing and computation pipeline, starting from input loading to final result visualization. Each stage in the architecture is implemented as modular code, allowing individual testing and future extension. The overall workflow and package components are outlined below and visualized in the accompanying diagram.
+
+1. **Main Controller – `main.py`**  
+   The simulation is initiated through `main.py`, which serves as the entry point. This script orchestrates the overall flow:
+   - Loading data  
+   - Executing the BEM loop  
+   - Managing outputs
+
+2. **Input Handling**  
+   A dedicated module is responsible for reading and preprocessing:
+   - Blade data coordinates  
+   - Airfoil geometry  
+   - Blade geometry  
+   - Power curve data  
+
+   These inputs are structured and passed to the solver in a format suitable for numerical processing.
+
+3. **Preprocessing and Plotting**  
+   Airfoil geometry is plotted prior to simulation. This step acts as a visual verification of:
+   - Correct airfoil shape  
+   - Input file integrity
+
+4. **BEM Solver Loop Initialization**  
+   For each combination of:
+   - Wind speed  
+   - Pitch angle  
+   - Rotational speed  
+
+   the BEM loop is initialized. Within each loop iteration, the following operations are performed:
+   - Calculate flow angle  
+   - Calculate angle of attack  
+   - Interpolate drag and lift coefficients  
+   - Compute initial induction factors  
+   - Apply Prandtl’s tip-loss correction  
+   - Update thrust coefficient  
+   - Iteratively update induction factors  
+   - Check convergence of induction values  
+
+   This iterative loop forms the core aerodynamic calculation.
+
+5. **Thrust and Power Calculation**  
+   Once convergence is achieved, the aerodynamic performance metrics are computed:
+   - Thrust  
+   - Torque  
+   - Aerodynamic power  
+
+   using the final values of flow variables and forces.
+
+6. **Results Output and Plotting**  
+   Simulation results are stored and visualized. This includes:
+   - Power curves  
+   - Thrust profiles  
+   - Convergence behavior  
+
+   These plots support validation and interpretation of the simulation results.
 
 A flow diagram of the code can be found in the file `flow_diagram_bem_optimization.png`:
 
